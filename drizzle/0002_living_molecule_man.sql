@@ -1,0 +1,2 @@
+ALTER TABLE "skill_target_assignments" ADD COLUMN "deployed_version" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+ALTER TABLE "skill_target_assignments" ADD COLUMN "deployed_at" timestamp DEFAULT now() NOT NULL;

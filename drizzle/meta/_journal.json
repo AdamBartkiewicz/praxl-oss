@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1774863406585,
+      "tag": "0000_fantastic_rattler",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1774885605396,
+      "tag": "0001_rare_titanium_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774890094343,
+      "tag": "0002_living_molecule_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1774892299781,
+      "tag": "0003_complex_praxagora",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775321418764,
+      "tag": "0004_unusual_zemo",
+      "breakpoints": true
+    }
+  ]
+}
