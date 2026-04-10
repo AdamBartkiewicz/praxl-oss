@@ -13,8 +13,14 @@ import {
   skillExistsAtPath,
   isPathWritable,
   PLATFORM_PATHS,
+  isBasePathSafe,
   type SyncResult,
 } from "@/lib/sync-engine";
+
+// Whitelist of CLI heartbeat actions the server is allowed to emit.
+const ALLOWED_CLI_ACTIONS = new Set(["sync", "disconnect", "import"]);
+// Minimum gap between server-emitted "import" actions (defense-in-depth — CLI also enforces this).
+const IMPORT_RATE_LIMIT_MS = 10 * 60 * 1000;
 
 /** Safely attempt a filesystem write; on serverless this may fail. */
 function safeWriteSkillToPath(
@@ -70,6 +76,12 @@ export const syncRouter = router({
       );
       const id = uuid();
       const basePath = input.basePath || PLATFORM_PATHS[input.platform] || "";
+      if (basePath && !isBasePathSafe(basePath)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `basePath '${basePath}' is not allowed. Skill paths must be under a dot-folder (e.g. ~/.claude/skills, ~/.cursor/skills).`,
+        });
+      }
       await db.insert(syncTargets).values({
         id,
         userId: ctx.userId,
@@ -95,6 +107,12 @@ export const syncRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const { id, ...updates } = input;
+      if (updates.basePath !== undefined && updates.basePath !== "" && !isBasePathSafe(updates.basePath)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `basePath '${updates.basePath}' is not allowed. Skill paths must be under a dot-folder (e.g. ~/.claude/skills, ~/.cursor/skills).`,
+        });
+      }
       await db
         .update(syncTargets)
         .set(updates)
@@ -617,7 +635,39 @@ export const syncRouter = router({
   sendCliCommand: mutationProcedure
     .input(z.object({ action: z.string(), slugs: z.array(z.string()).optional() }))
     .mutation(async ({ ctx, input }) => {
+      // Whitelist actions — defense-in-depth, CLI also enforces this
+      if (!ALLOWED_CLI_ACTIONS.has(input.action)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Unknown CLI action: '${input.action}'. Allowed: ${[...ALLOWED_CLI_ACTIONS].join(", ")}`,
+        });
+      }
+
       const key = "cli_pending_sync";
+
+      // Rate-limit "import" actions to prevent recon spam
+      if (input.action === "import") {
+        const lastImportKey = "cli_last_import_at";
+        const last = await db.query.appSettings.findFirst({
+          where: and(eq(appSettings.key, lastImportKey), eq(appSettings.userId, ctx.userId)),
+        });
+        const lastTs = last?.value ? Number(last.value) : 0;
+        const now = Date.now();
+        if (now - lastTs < IMPORT_RATE_LIMIT_MS) {
+          const remainingS = Math.ceil((IMPORT_RATE_LIMIT_MS - (now - lastTs)) / 1000);
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: `Import rate-limited. Try again in ${remainingS}s.`,
+          });
+        }
+        // Stamp new last-import time
+        if (last) {
+          await db.update(appSettings).set({ value: String(now) }).where(and(eq(appSettings.key, lastImportKey), eq(appSettings.userId, ctx.userId)));
+        } else {
+          await db.insert(appSettings).values({ userId: ctx.userId, key: lastImportKey, value: String(now) });
+        }
+      }
+
       const value = JSON.stringify({ action: input.action, slugs: input.slugs });
       const existing = await db.query.appSettings.findFirst({
         where: and(eq(appSettings.key, key), eq(appSettings.userId, ctx.userId)),

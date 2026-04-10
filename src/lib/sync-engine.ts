@@ -33,6 +33,53 @@ export const PLATFORM_PATHS: Record<string, string> = {
   "openclaw": "~/.openclaw/skills/",
 };
 
+// ─── Security validators ──────────────────────────────────────────────────
+// Defense-in-depth: even though the CLI validates these, the server rejects
+// dangerous inputs at the source so they never propagate to any client.
+
+/** Reference-file extensions allowed when shipping skills to a CLI client. */
+export const ALLOWED_FILE_EXTENSIONS = new Set([
+  ".md", ".txt", ".json", ".yaml", ".yml", ".csv", ".xml",
+  ".toml", ".ini", ".html", ".svg", ".png",
+]);
+
+/**
+ * Validate a user-supplied basePath. Allows only:
+ *  - Built-in PLATFORM_PATHS values (any prefix form: with/without ~/, with/without trailing slash)
+ *  - User-relative dot-folder skill paths matching `~/.<name>/skills/...` or `.<name>/skills/...`
+ * Rejects: absolute system paths, traversal segments, anything outside dot-folders.
+ */
+export function isBasePathSafe(rawBasePath: string): boolean {
+  if (typeof rawBasePath !== "string" || rawBasePath.length === 0) return false;
+  if (rawBasePath.length > 512) return false;
+  if (rawBasePath.includes("\0")) return false;
+  if (rawBasePath.includes("..")) return false;
+
+  // Strip trailing slashes for comparison
+  const normalized = rawBasePath.replace(/\/+$/, "");
+
+  // Allow exact match against built-in platform paths (any normalization)
+  for (const p of Object.values(PLATFORM_PATHS)) {
+    if (normalized === p.replace(/\/+$/, "")) return true;
+  }
+
+  // Forbid leading / (absolute) — except ~/ which is user-home expansion
+  if (normalized.startsWith("/")) return false;
+  if (normalized.startsWith("~/")) {
+    return /^~\/\.[a-z][\w.-]{0,30}\/skills(\/[\w.\/-]{0,200})?$/i.test(normalized);
+  }
+  return /^\.[a-z][\w.-]{0,30}\/skills(\/[\w.\/-]{0,200})?$/i.test(normalized);
+}
+
+/** Validate a single reference-file extension against the allowlist. */
+export function isFileExtensionAllowed(filename: string): boolean {
+  if (typeof filename !== "string" || filename.length === 0) return false;
+  const dot = filename.lastIndexOf(".");
+  if (dot < 0) return false;
+  const ext = filename.slice(dot).toLowerCase();
+  return ALLOWED_FILE_EXTENSIONS.has(ext);
+}
+
 // Write a skill to filesystem
 export function writeSkillToPath(
   basePath: string,
@@ -52,6 +99,11 @@ export function writeSkillToPath(
 
     // Write support files
     for (const file of files) {
+      // Defense-in-depth: skip files with disallowed extensions
+      if (!isFileExtensionAllowed(file.filename)) {
+        console.warn(`[sync-engine] skipping file with disallowed extension: ${file.filename}`);
+        continue;
+      }
       const subDir = path.join(skillDir, file.folder);
       fs.mkdirSync(subDir, { recursive: true });
 
