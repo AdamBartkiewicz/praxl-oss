@@ -73,12 +73,13 @@ Search 13,700+ community skills from ClawHub. Filter, preview, install with one 
 # Discover the skills you already have (no signup, no install of the full app)
 npx praxl-app scan
 
-# Or self-host the full Praxl in 5 minutes
+# Or self-host the full Praxl in 5 minutes (macOS / Linux)
 git clone https://github.com/AdamBartkiewicz/praxl-oss.git
-cd praxl-oss && cp .env.example .env
-sed -i '' "s|^AUTH_SECRET=.*|AUTH_SECRET=$(openssl rand -base64 32)|" .env
-docker compose up -d
-open http://localhost:3000
+cd praxl-oss
+cp .env.example .env
+sed -i.bak "s|^AUTH_SECRET=.*|AUTH_SECRET=$(openssl rand -base64 32)|" .env && rm .env.bak
+docker compose up -d --build
+# Wait ~2 minutes for build + db init, then visit http://localhost:3000
 ```
 
 > 🪄 **Or paste a single prompt** into Claude Code / Cursor and have your AI agent deploy it for you. See [SETUP-WITH-AI.md](SETUP-WITH-AI.md).
@@ -231,14 +232,14 @@ git clone https://github.com/AdamBartkiewicz/praxl-oss.git
 cd praxl-oss
 cp .env.example .env
 
-# Generate AUTH_SECRET (one shell command — works for AI agents too)
-sed -i '' "s|^AUTH_SECRET=.*|AUTH_SECRET=$(openssl rand -base64 32)|" .env
+# Generate AUTH_SECRET — works on macOS AND Linux (sed -i.bak is portable)
+sed -i.bak "s|^AUTH_SECRET=.*|AUTH_SECRET=$(openssl rand -base64 32)|" .env && rm .env.bak
 
-# Start
-docker compose up -d
+# Build + start (~2 min first time)
+docker compose up -d --build
 ```
 
-Open **http://localhost:3000** and create your account.
+Wait for the migrate container to finish (`docker compose ps` should show `migrate` as `exited (0)`), then open **http://localhost:3000** and create your account.
 
 > 🪄 **Using an AI agent?** Copy [SETUP-WITH-AI.md](SETUP-WITH-AI.md) into Claude Code / Cursor — it handles every step including troubleshooting.
 
