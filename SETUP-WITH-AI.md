@@ -56,19 +56,24 @@ Now you need to set AUTH_SECRET to a real random value. The default in
 .env.example is the literal string "change-me-to-a-random-string" which
 will cause the app to refuse to start.
 
-3a. Generate a secret:
-  SECRET=$(openssl rand -base64 32)
-  echo "$SECRET"
-  (this prints the secret so you can verify it; it's also stored in $SECRET)
+3a-b. Generate a secret AND replace AUTH_SECRET in one command. This is
+important for AI agents whose Bash tool starts a fresh shell on every
+invocation — environment variables don't persist between calls, so the
+generation and substitution must happen in the same shell command.
 
-3b. Replace the AUTH_SECRET line in .env. Use sed or your file editor:
-  macOS:  sed -i '' "s|^AUTH_SECRET=.*|AUTH_SECRET=$SECRET|" .env
-  Linux:  sed -i    "s|^AUTH_SECRET=.*|AUTH_SECRET=$SECRET|" .env
-  (or just open .env in any editor and replace the value manually)
+  macOS (one line):
+    sed -i '' "s|^AUTH_SECRET=.*|AUTH_SECRET=$(openssl rand -base64 32)|" .env
+
+  Linux (one line):
+    sed -i "s|^AUTH_SECRET=.*|AUTH_SECRET=$(openssl rand -base64 32)|" .env
+
+  (Or open .env in any editor and paste a fresh `openssl rand -base64 32`
+   value into the AUTH_SECRET line manually.)
 
 3c. Verify the secret is set (NOT the placeholder anymore):
   grep ^AUTH_SECRET .env
-  (should NOT contain "change-me")
+  (should NOT contain "change-me-to-a-random-string"; the value should be
+   ~44 characters of base64)
 
 3d. Confirm NEXT_PUBLIC_APP_URL is correct:
   grep ^NEXT_PUBLIC_APP_URL .env
@@ -151,13 +156,17 @@ command depends on how Postgres is installed:
     DATABASE_URL=postgresql://your_user:your_password@localhost:5432/praxl
 
 4b-4. CRITICAL — Create database tables. drizzle-kit push is interactive
-by default and will ask whether to apply pending changes. Use the
-non-interactive flag so AI agents don't hang:
+by default and will ask whether to apply pending schema changes. Use the
+non-interactive flag so AI agents don't hang waiting on stdin:
   npx drizzle-kit push --force
 
-If --force is not recognized on your drizzle-kit version, try:
-  npx drizzle-kit push --strict=false
-or run interactively and answer "y" to any prompts.
+If --force is not recognized on your drizzle-kit version (very old releases),
+fall back to piping `yes` so any "do you want to proceed?" prompts get an
+automatic yes:
+  yes | npx drizzle-kit push
+
+(There is no `--strict=false` flag in drizzle-kit — ignore any guide that
+mentions one.)
 
 4b-5. Start the dev server:
   npm run dev
@@ -213,19 +222,23 @@ The output looks like:
 Copy the UUID from the `id` column.
 
 6b. Set ADMIN_USER_IDS in .env. Both vars must be set to the SAME UUID
-because one is server-side and one is exposed to the client UI:
-  USER_ID="a1c1204d-e8d3-4ca0-a1c0-9614fea60990"   # paste yours here
+because one is server-side and one is exposed to the client UI.
+Substitute the actual UUID directly into the sed command (don't rely on
+shell variables persisting between Bash tool calls):
 
-  macOS:
-    sed -i '' "s|^ADMIN_USER_IDS=.*|ADMIN_USER_IDS=$USER_ID|" .env
-    sed -i '' "s|^NEXT_PUBLIC_ADMIN_USER_IDS=.*|NEXT_PUBLIC_ADMIN_USER_IDS=$USER_ID|" .env
+  Replace `YOUR-UUID-HERE` below with the actual UUID from step 6a.
 
-  Linux:
-    sed -i "s|^ADMIN_USER_IDS=.*|ADMIN_USER_IDS=$USER_ID|" .env
-    sed -i "s|^NEXT_PUBLIC_ADMIN_USER_IDS=.*|NEXT_PUBLIC_ADMIN_USER_IDS=$USER_ID|" .env
+  macOS (run both lines):
+    sed -i '' "s|^ADMIN_USER_IDS=.*|ADMIN_USER_IDS=YOUR-UUID-HERE|" .env
+    sed -i '' "s|^NEXT_PUBLIC_ADMIN_USER_IDS=.*|NEXT_PUBLIC_ADMIN_USER_IDS=YOUR-UUID-HERE|" .env
+
+  Linux (run both lines):
+    sed -i "s|^ADMIN_USER_IDS=.*|ADMIN_USER_IDS=YOUR-UUID-HERE|" .env
+    sed -i "s|^NEXT_PUBLIC_ADMIN_USER_IDS=.*|NEXT_PUBLIC_ADMIN_USER_IDS=YOUR-UUID-HERE|" .env
 
 Verify:
   grep ADMIN_USER_IDS .env
+  (both ADMIN_USER_IDS and NEXT_PUBLIC_ADMIN_USER_IDS should show the UUID)
 
 6c. Restart the app so the new env vars are picked up:
   Docker:  docker compose restart app

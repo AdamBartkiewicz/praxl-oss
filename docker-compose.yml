@@ -28,7 +28,10 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://praxl:praxl@db:5432/praxl
-    command: npx drizzle-kit push
+    # --force makes drizzle-kit non-interactive. Without it, the migrate
+    # container hangs forever if drizzle-kit detects a potentially destructive
+    # schema change and waits on stdin (which doesn't exist in detached mode).
+    command: npx drizzle-kit push --force
     restart: "no"
 
   app:
