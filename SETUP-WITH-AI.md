@@ -18,17 +18,30 @@ Do not skip steps. Confirm each major step before proceeding.
 
 ### STEP 1: Check prerequisites
 
-Check if these are installed on my system:
-- Docker and Docker Compose (run: docker --version && docker compose version)
-- OR Node.js 20+ and PostgreSQL 16+ (run: node --version && psql --version)
+First, ask the user what OS they are on (macOS / Linux / Windows+WSL) — branching depends on it.
 
-If Docker is available, use the Docker path.
-If only Node.js is available, use the manual path.
-If neither is available, help me install Docker first.
+Then check the following are installed:
+- git (run: git --version)
+- openssl (run: openssl version)
+- Docker AND Docker Compose v2 (run: docker --version && docker compose version)
+  - OR Node.js 20+ AND PostgreSQL 16+ (run: node --version && psql --version)
 
-IMPORTANT: If using Docker on macOS, make sure Docker Desktop is running:
-  open -a Docker
-Wait a few seconds for it to start before proceeding.
+Decision tree:
+- If Docker is available → use STEP 4A (Docker path, recommended).
+- If only Node.js is available → use STEP 4B (manual path).
+- If neither → help the user install Docker Desktop first:
+  - macOS: https://docs.docker.com/desktop/install/mac-install/
+  - Windows: https://docs.docker.com/desktop/install/windows-install/
+  - Linux: https://docs.docker.com/engine/install/
+
+IMPORTANT — Docker daemon must be running before any `docker` command:
+- macOS: open -a Docker  (then wait ~10 seconds for the daemon)
+- Windows: launch Docker Desktop from the Start menu
+- Linux: sudo systemctl start docker  (or it auto-starts after install)
+
+Verify the daemon is up:
+  docker ps
+If this returns "Cannot connect to the Docker daemon", the daemon isn't running yet — wait or restart Docker Desktop.
 
 ### STEP 2: Clone the repository
 
@@ -39,108 +52,189 @@ cd praxl-oss
 
 cp .env.example .env
 
-Now generate a secure secret and write it into .env:
-- Generate: openssl rand -base64 32
-- Set it as AUTH_SECRET in .env
-- Set NEXT_PUBLIC_APP_URL to http://localhost:3000 (or my domain if I have one)
+Now you need to set AUTH_SECRET to a real random value. The default in
+.env.example is the literal string "change-me-to-a-random-string" which
+will cause the app to refuse to start.
 
-The .env file must have at minimum:
-AUTH_SECRET=<the-generated-secret>
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+3a. Generate a secret:
+  SECRET=$(openssl rand -base64 32)
+  echo "$SECRET"
+  (this prints the secret so you can verify it; it's also stored in $SECRET)
 
-NOTE: Do NOT set DATABASE_URL in .env for Docker - docker-compose.yml
-overrides it with the correct internal hostname (db, not localhost).
+3b. Replace the AUTH_SECRET line in .env. Use sed or your file editor:
+  macOS:  sed -i '' "s|^AUTH_SECRET=.*|AUTH_SECRET=$SECRET|" .env
+  Linux:  sed -i    "s|^AUTH_SECRET=.*|AUTH_SECRET=$SECRET|" .env
+  (or just open .env in any editor and replace the value manually)
+
+3c. Verify the secret is set (NOT the placeholder anymore):
+  grep ^AUTH_SECRET .env
+  (should NOT contain "change-me")
+
+3d. Confirm NEXT_PUBLIC_APP_URL is correct:
+  grep ^NEXT_PUBLIC_APP_URL .env
+  Default is http://localhost:3000 — leave it as-is unless you're deploying
+  to a real domain.
+
+NOTE — DATABASE_URL: As of the latest .env.example, DATABASE_URL is commented
+out by default (this is correct). Docker Compose injects it automatically with
+the right internal hostname (db, not localhost). Leave that line commented.
+If you see an UNcommented DATABASE_URL in .env, comment it out:
+  sed -i '' 's|^DATABASE_URL=|# DATABASE_URL=|' .env  (macOS)
+  sed -i    's|^DATABASE_URL=|# DATABASE_URL=|' .env  (Linux)
 
 ### STEP 4A: Deploy with Docker (preferred)
 
-IMPORTANT: First check if port 3000 is already in use:
-  lsof -i :3000
+4a-1. Port collision check — port 3000 is the most common Next.js dev port
+and may be in use. Check:
+  lsof -i :3000  (macOS/Linux)
+  netstat -ano | findstr :3000  (Windows)
 
-If port 3000 is busy, edit docker-compose.yml and change "3000:3000" to "3001:3000"
-(or another free port). Then update NEXT_PUBLIC_APP_URL in .env to match (e.g. http://localhost:3001).
+If port 3000 is busy:
+- Edit docker-compose.yml: change "3000:3000" to "3001:3000" (or another free port)
+- Update NEXT_PUBLIC_APP_URL in .env to match: http://localhost:3001
+  sed -i '' 's|localhost:3000|localhost:3001|' .env  (macOS)
 
-Run:
-docker compose up -d --build
+NOTE on port 5432 (Postgres): the db service is intentionally NOT published
+to the host in docker-compose.yml. It's only reachable inside the Docker
+network. So even if you have a local PostgreSQL on 5432, there's no collision.
 
-Wait for the build to complete (2-3 minutes first time).
+4a-2. Build and start:
+  docker compose up -d --build
 
-Three services will start:
-1. db (PostgreSQL) - starts first, waits for healthy
-2. migrate (creates database tables) - runs once and exits
-3. app (Next.js) - starts after migration completes
+Wait for the build to complete (2-5 minutes first time, faster on rebuilds).
+The first build downloads Node + Postgres images and runs `npm ci` — be patient.
+
+4a-3. Three services will start in order:
+1. db (PostgreSQL) — starts first, waits for healthy
+2. migrate (creates database tables) — runs once and exits with code 0
+3. app (Next.js) — starts after migration completes successfully
 
 Check status:
-docker compose ps
+  docker compose ps
 
-Expected output:
-- db: running (healthy)
-- migrate: exited (0) - THIS IS NORMAL, it ran successfully
-- app: running
+Expected:
+- db:      running (healthy)
+- migrate: exited (0)   ← THIS IS NORMAL — exit 0 means migrations succeeded
+- app:     running
 
-Test:
-curl -s http://localhost:3000/api/health
+If `migrate` shows a non-zero exit code, the database didn't migrate. Check:
+  docker compose logs migrate --tail 50
 
-Expected: {"status":"ok","database":"connected"}
+4a-4. Health check:
+  curl -sS http://localhost:3000/api/health
+  (use -sS so curl shows errors but suppresses progress bar)
 
-If health check fails:
-- Check app logs: docker compose logs app --tail 50
-- Check migration: docker compose logs migrate --tail 50
-- If "database does not exist": docker compose down -v && docker compose up -d --build
+Expected response (JSON):
+  {"status":"ok","database":"connected"}
+
+If you don't see this:
+- App logs:    docker compose logs app --tail 50
+- Migrate logs: docker compose logs migrate --tail 50
+- If "relation does not exist" — migration didn't run. WARNING: the next
+  command WIPES the database (which is fine on fresh install but destructive
+  if you already have data):
+    docker compose down -v && docker compose up -d --build
 
 ### STEP 4B: Deploy manually (if no Docker)
 
-Install dependencies:
-npm install
+4b-1. Install dependencies:
+  npm install
 
-Make sure PostgreSQL is running and a database exists:
-createdb praxl
-# or: CREATE DATABASE praxl;
+4b-2. Make sure PostgreSQL is running and create a database. The exact
+command depends on how Postgres is installed:
+  createdb praxl                                  (if your shell user has Postgres rights)
+  psql -U postgres -c "CREATE DATABASE praxl;"    (if you need to use postgres superuser)
 
-Set DATABASE_URL in .env:
-DATABASE_URL=postgresql://your_user:your_password@localhost:5432/praxl
+4b-3. Set DATABASE_URL in .env (uncomment it AND fill in real credentials):
+  Edit .env, find the commented "# DATABASE_URL=..." line, uncomment it,
+  and replace with your actual user/password/host:
+    DATABASE_URL=postgresql://your_user:your_password@localhost:5432/praxl
 
-Create database tables (CRITICAL - app won't work without this):
-npx drizzle-kit push
+4b-4. CRITICAL — Create database tables. drizzle-kit push is interactive
+by default and will ask whether to apply pending changes. Use the
+non-interactive flag so AI agents don't hang:
+  npx drizzle-kit push --force
 
-Start the dev server:
-npm run dev
+If --force is not recognized on your drizzle-kit version, try:
+  npx drizzle-kit push --strict=false
+or run interactively and answer "y" to any prompts.
 
-Test: curl -s http://localhost:3000/api/health
+4b-5. Start the dev server:
+  npm run dev
+
+This runs in the foreground. To restart, kill it with Ctrl+C and run again.
+For long-running deployments, use a process manager (pm2, systemd) instead.
+
+4b-6. Test in a separate terminal:
+  curl -sS http://localhost:3000/api/health
 
 ### STEP 5: Create the first account
 
-Open the app URL in a browser (http://localhost:3000 or :3001 if port was changed).
-Go to /sign-up and create an account with name, email, and password (min 8 chars).
+⚠️ STOP HERE — USER ACTION REQUIRED ⚠️
 
-After registration, you should be automatically redirected to the dashboard
-with a sidebar showing: Dashboard, Skills, Projects, Sync, AI Studio, etc.
+You (the AI agent) cannot do this step. Tell the user explicitly:
 
-If you see the sign-in page instead of the dashboard after registering:
-- Clear browser cookies for localhost
-- Try in an incognito/private window
-- Register again
+  "The server is running. I need you to do this manually:
+   1. Open this URL in your browser: http://localhost:3000/sign-up
+      (or http://localhost:3001/sign-up if you changed the port in step 4a-1)
+   2. Enter a name, email, and password (minimum 8 characters)
+   3. Submit the form
+   4. You should be redirected to the Dashboard with a sidebar on the left
+      showing: Dashboard, Skills, Projects, Sync, AI Studio, Settings, etc.
+   5. Tell me 'done' or 'logged in' when you see the dashboard, and we'll
+      continue."
 
-### STEP 6: Set up admin access
+WAIT for the user to confirm before proceeding to step 6.
 
-After creating your account, get your user ID from the database.
+If the user reports they see the sign-in page instead of the dashboard
+after registering:
+- Tell them to clear browser cookies for localhost
+- Tell them to try in an incognito/private window
+- Tell them to register again
+
+### STEP 6: Set up admin access (optional but recommended for first user)
+
+Now that the user has created their account, get their user ID from the
+database. They become the workspace admin (sees an Admin Panel in the sidebar).
+
+6a. Get the user ID:
 
 For Docker:
-docker compose exec db psql -U praxl -c "SELECT id, email FROM users;"
+  docker compose exec db psql -U praxl -d praxl -c "SELECT id, email FROM users;"
 
-For manual:
-psql -U praxl -d praxl -c "SELECT id, email FROM users;"
+For manual install:
+  psql -U praxl -d praxl -c "SELECT id, email FROM users;"
 
-Copy the UUID (looks like: a1c1204d-e8d3-4ca0-a1c0-9614fea60990).
+The output looks like:
+                   id                   |       email
+  --------------------------------------+----------------------
+   a1c1204d-e8d3-4ca0-a1c0-9614fea60990 | user@example.com
 
-Add to .env (both lines):
-ADMIN_USER_IDS=<the-user-id>
-NEXT_PUBLIC_ADMIN_USER_IDS=<the-user-id>
+Copy the UUID from the `id` column.
 
-Restart:
-Docker: docker compose restart app
-Manual: restart the npm run dev process
+6b. Set ADMIN_USER_IDS in .env. Both vars must be set to the SAME UUID
+because one is server-side and one is exposed to the client UI:
+  USER_ID="a1c1204d-e8d3-4ca0-a1c0-9614fea60990"   # paste yours here
 
-After restart, you should see "Admin Panel" in the sidebar.
+  macOS:
+    sed -i '' "s|^ADMIN_USER_IDS=.*|ADMIN_USER_IDS=$USER_ID|" .env
+    sed -i '' "s|^NEXT_PUBLIC_ADMIN_USER_IDS=.*|NEXT_PUBLIC_ADMIN_USER_IDS=$USER_ID|" .env
+
+  Linux:
+    sed -i "s|^ADMIN_USER_IDS=.*|ADMIN_USER_IDS=$USER_ID|" .env
+    sed -i "s|^NEXT_PUBLIC_ADMIN_USER_IDS=.*|NEXT_PUBLIC_ADMIN_USER_IDS=$USER_ID|" .env
+
+Verify:
+  grep ADMIN_USER_IDS .env
+
+6c. Restart the app so the new env vars are picked up:
+  Docker:  docker compose restart app
+  Manual:  Ctrl+C the `npm run dev` process and run it again
+
+⚠️ STOP HERE — USER ACTION REQUIRED ⚠️
+Tell the user: "I've enabled admin access. Hard-refresh your browser
+(Cmd+Shift+R / Ctrl+Shift+R) and tell me if you now see 'Admin Panel'
+in the sidebar."
 
 ### STEP 7: Verify everything works
 

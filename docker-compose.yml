@@ -8,8 +8,11 @@ services:
       POSTGRES_DB: praxl
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # NOTE: db is intentionally NOT published to the host. The app and migrate
+    # services connect via the internal Docker network at db:5432. If you need
+    # direct host access (e.g. to inspect with a GUI client), uncomment:
+    # ports:
+    #   - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U praxl"]
       interval: 5s
