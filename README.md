@@ -74,6 +74,32 @@ One edit in Praxl deploys to **9 AI tools** simultaneously.
 └────────────────────────────────────────────────────────────┘
 ```
 
+## Screenshots
+
+![Praxl Dashboard](docs/screenshots/01-dashboard.png)
+*Dashboard with stats, quick actions, and recent activity.*
+
+![Skills List](docs/screenshots/03-skills-list.png)
+*Skill library with search, tags, version, and inline preview.*
+
+![Skill Editor](docs/screenshots/04-skill-editor.png)
+*Monaco-powered skill editor with syntax highlighting, AI assistant, security scanner, and one-click deploy.*
+
+![Marketplace](docs/screenshots/02-marketplace.png)
+*Browse 13,700+ community skills via ClawHub integration.*
+
+![Create Skill Wizard](docs/screenshots/05-skill-create.png)
+*5-step skill creation wizard — category, use cases, frontmatter, content, review.*
+
+![AI Studio](docs/screenshots/06-ai-studio.png)
+*AI-powered skill generation, batch review, and chat. Bring your own Anthropic key or set a server-wide one.*
+
+![Multi-tool Sync](docs/screenshots/07-sync.png)
+*Sync skills to Claude Code, Cursor, Codex, Copilot, Windsurf, OpenCode, OpenClaw, Gemini CLI, and Claude.ai via the praxl-app CLI.*
+
+![Settings](docs/screenshots/08-settings.png)
+*Plan & billing, AI usage tracking, Anthropic API key configuration. All features unlocked on self-host.*
+
 ## Quick Start
 
 ### Option 1: Docker (recommended)
