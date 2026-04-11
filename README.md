@@ -74,6 +74,20 @@ One edit in Praxl deploys to **9 AI tools** simultaneously.
 └────────────────────────────────────────────────────────────┘
 ```
 
+## Demo
+
+![Browse skills and open the editor](docs/demos/01-browse-and-edit.gif)
+*Browse the skill library, click a skill, and the Monaco editor opens with AI assistant, security scanner, and version history side-by-side.*
+
+![Live edit + save](docs/demos/02-edit-and-save.gif)
+*Live-edit a skill in Monaco. Changes save with one click — versioned, diffable, rollbackable.*
+
+![Browse the marketplace](docs/demos/03-marketplace.gif)
+*Search 13,700+ community skills from ClawHub. Filter, preview, install with one click.*
+
+![CLI scan](docs/demos/04-cli-scan.gif)
+*`praxl scan` discovers all your existing SKILL.md files across Claude Code, Cursor, Codex, and 6 more tools — and scores each on quality + security in one pass.*
+
 ## Screenshots
 
 ![Praxl Dashboard](docs/screenshots/01-dashboard.png)
