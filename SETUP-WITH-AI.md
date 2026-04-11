@@ -97,7 +97,8 @@ and may be in use. Check:
 If port 3000 is busy:
 - Edit docker-compose.yml: change "3000:3000" to "3001:3000" (or another free port)
 - Update NEXT_PUBLIC_APP_URL in .env to match: http://localhost:3001
-  sed -i '' 's|localhost:3000|localhost:3001|' .env  (macOS)
+  macOS:  sed -i '' 's|localhost:3000|localhost:3001|' .env
+  Linux:  sed -i    's|localhost:3000|localhost:3001|' .env
 
 NOTE on port 5432 (Postgres): the db service is intentionally NOT published
 to the host in docker-compose.yml. It's only reachable inside the Docker
