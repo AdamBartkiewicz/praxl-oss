@@ -76,43 +76,80 @@ One edit in Praxl deploys to **9 AI tools** simultaneously.
 
 ## Demo
 
+<p align="center">
+  <video src="https://github.com/AdamBartkiewicz/praxl-oss/raw/main/docs/demos/praxl-demo.mp4" autoplay loop muted playsinline width="900">
+    <img src="docs/demos/praxl-demo.gif" alt="Praxl — full product demo: browse, edit, marketplace, CLI scan" width="900" />
+  </video>
+</p>
+
+*Full product walk-through (~50 seconds) — browse the skill library, edit a skill in Monaco, search the community marketplace, and discover existing skills with the CLI.*
+
+### Individual demos
+
+<details>
+<summary><b>1. Browse and open the editor</b></summary>
+
 ![Browse skills and open the editor](docs/demos/01-browse-and-edit.gif)
-*Browse the skill library, click a skill, and the Monaco editor opens with AI assistant, security scanner, and version history side-by-side.*
+
+Browse the skill library, click a skill, and the Monaco editor opens with the AI assistant, security scanner, and version history side-by-side.
+
+</details>
+
+<details>
+<summary><b>2. Live edit and save</b></summary>
 
 ![Live edit + save](docs/demos/02-edit-and-save.gif)
-*Live-edit a skill in Monaco. Changes save with one click — versioned, diffable, rollbackable.*
+
+Live-edit a skill in Monaco. Changes save with one click — versioned, diffable, rollbackable.
+
+</details>
+
+<details>
+<summary><b>3. Browse the marketplace</b></summary>
 
 ![Browse the marketplace](docs/demos/03-marketplace.gif)
-*Search 13,700+ community skills from ClawHub. Filter, preview, install with one click.*
+
+Search 13,700+ community skills from ClawHub. Filter, preview, install with one click.
+
+</details>
+
+<details>
+<summary><b>4. CLI scan</b></summary>
 
 ![CLI scan](docs/demos/04-cli-scan.gif)
-*`praxl scan` discovers all your existing SKILL.md files across Claude Code, Cursor, Codex, and 6 more tools — and scores each on quality + security in one pass.*
 
-## Screenshots
+`praxl scan` discovers all your existing SKILL.md files across Claude Code, Cursor, Codex, and 6 more tools — and scores each on quality + security in one pass.
 
-![Praxl Dashboard](docs/screenshots/01-dashboard.png)
-*Dashboard with stats, quick actions, and recent activity.*
+</details>
 
-![Skills List](docs/screenshots/03-skills-list.png)
-*Skill library with search, tags, version, and inline preview.*
+## App Preview
 
-![Skill Editor](docs/screenshots/04-skill-editor.png)
-*Monaco-powered skill editor with syntax highlighting, AI assistant, security scanner, and one-click deploy.*
-
-![Marketplace](docs/screenshots/02-marketplace.png)
-*Browse 13,700+ community skills via ClawHub integration.*
-
-![Create Skill Wizard](docs/screenshots/05-skill-create.png)
-*5-step skill creation wizard — category, use cases, frontmatter, content, review.*
-
-![AI Studio](docs/screenshots/06-ai-studio.png)
-*AI-powered skill generation, batch review, and chat. Bring your own Anthropic key or set a server-wide one.*
-
-![Multi-tool Sync](docs/screenshots/07-sync.png)
-*Sync skills to Claude Code, Cursor, Codex, Copilot, Windsurf, OpenCode, OpenClaw, Gemini CLI, and Claude.ai via the praxl-app CLI.*
-
-![Settings](docs/screenshots/08-settings.png)
-*Plan & billing, AI usage tracking, Anthropic API key configuration. All features unlocked on self-host.*
+<table>
+  <tr>
+    <td align="center"><b>Skill Editor</b></td>
+    <td align="center"><b>Community Marketplace</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/04-skill-editor.png" alt="Monaco-powered skill editor with AI assistant, security scanner, and one-click deploy" /></td>
+    <td><img src="docs/screenshots/02-marketplace.png" alt="Browse 13,700+ community skills via ClawHub integration" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Dashboard</b></td>
+    <td align="center"><b>AI Studio</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/01-dashboard.png" alt="Dashboard with stats, quick actions, and recent activity" /></td>
+    <td><img src="docs/screenshots/06-ai-studio.png" alt="AI-powered skill generation, batch review, and chat" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Skill Library</b></td>
+    <td align="center"><b>Multi-Tool Sync</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/03-skills-list.png" alt="Skill library with search, tags, version, and inline preview" /></td>
+    <td><img src="docs/screenshots/07-sync.png" alt="Sync skills across 9 AI coding tools via the praxl-app CLI" /></td>
+  </tr>
+</table>
 
 ## Quick Start
 
