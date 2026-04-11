@@ -76,13 +76,9 @@ One edit in Praxl deploys to **9 AI tools** simultaneously.
 
 ## Demo
 
-<p align="center">
-  <video src="https://github.com/AdamBartkiewicz/praxl-oss/raw/main/docs/demos/praxl-demo.mp4" autoplay loop muted playsinline width="900">
-    <img src="docs/demos/praxl-demo.gif" alt="Praxl — full product demo: browse, edit, marketplace, CLI scan" width="900" />
-  </video>
-</p>
+![Praxl — full product walk-through: browse, edit, marketplace, CLI scan](docs/demos/praxl-demo.gif)
 
-*Full product walk-through (~50 seconds) — browse the skill library, edit a skill in Monaco, search the community marketplace, and discover existing skills with the CLI.*
+*52-second walk-through — browse the skill library, edit a skill in Monaco, search the community marketplace, and discover existing skills with the CLI. ([Watch in higher quality (MP4, 2.9 MB)](docs/demos/praxl-demo.mp4))*
 
 ### Individual demos
 
