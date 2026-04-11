@@ -27,12 +27,17 @@ const buttonVariants = cva(
         xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
         lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
-        icon: "size-8",
+        // Mobile touch targets: every icon-only button gets a minimum
+        // 44x44 tap area on mobile (iOS HIG minimum), then restores to its
+        // visual size on lg+ (1024px+). This expands the *clickable* zone
+        // without changing the visible button on touch devices, preventing
+        // mis-taps on phones while keeping desktop UI dense.
+        icon: "size-8 min-h-11 min-w-11 lg:min-h-8 lg:min-w-8",
         "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
+          "size-6 min-h-11 min-w-11 lg:min-h-6 lg:min-w-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
         "icon-sm":
-          "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "size-9",
+          "size-7 min-h-11 min-w-11 lg:min-h-7 lg:min-w-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
+        "icon-lg": "size-9 min-h-11 min-w-11 lg:min-h-9 lg:min-w-9",
       },
     },
     defaultVariants: {

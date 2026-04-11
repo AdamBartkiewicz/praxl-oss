@@ -562,7 +562,14 @@ export default function AIStudioPage() {
           {generatedContent && (
             <div className="space-y-3">
               <Separator />
-              <div className="overflow-hidden rounded-lg border">
+              {/* Mobile: textarea preview. Desktop: Monaco */}
+              <textarea
+                className="lg:hidden block w-full min-h-[300px] rounded-lg border p-3 font-mono text-xs bg-background text-foreground resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+                value={generatedContent}
+                readOnly
+                spellCheck={false}
+              />
+              <div className="hidden lg:block overflow-hidden rounded-lg border">
                 <Editor
                   height="400px"
                   language="markdown"
@@ -706,23 +713,31 @@ export default function AIStudioPage() {
                                   </span>
                                 </div>
                               ) : expandedReviewContent ? (
-                                <div className="overflow-hidden rounded-lg border">
-                                  <Editor
-                                    height="300px"
-                                    language="markdown"
-                                    theme="vs-dark"
+                                <>
+                                  <textarea
+                                    className="lg:hidden block w-full min-h-[250px] rounded-lg border p-3 font-mono text-xs bg-background text-foreground resize-y focus:outline-none focus:ring-2 focus:ring-ring"
                                     value={expandedReviewContent}
-                                    options={{
-                                      readOnly: true,
-                                      minimap: { enabled: false },
-                                      wordWrap: "on",
-                                      scrollBeyondLastLine: false,
-                                      fontSize: 13,
-                                      lineNumbers: "off",
-                                      padding: { top: 12 },
-                                    }}
+                                    readOnly
+                                    spellCheck={false}
                                   />
-                                </div>
+                                  <div className="hidden lg:block overflow-hidden rounded-lg border">
+                                    <Editor
+                                      height="300px"
+                                      language="markdown"
+                                      theme="vs-dark"
+                                      value={expandedReviewContent}
+                                      options={{
+                                        readOnly: true,
+                                        minimap: { enabled: false },
+                                        wordWrap: "on",
+                                        scrollBeyondLastLine: false,
+                                        fontSize: 13,
+                                        lineNumbers: "off",
+                                        padding: { top: 12 },
+                                      }}
+                                    />
+                                  </div>
+                                </>
                               ) : (
                                 <p className="text-sm text-muted-foreground">
                                   No review content available.

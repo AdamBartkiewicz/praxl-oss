@@ -1362,25 +1362,36 @@ export default function SkillEditorPage({
                 }}
               />
             ) : editorMode === "code" ? (
-              <Editor
-                height="100%"
-                language="markdown"
-                theme={resolvedTheme === "dark" ? "vs-dark" : "vs"}
-                value={content}
-                onChange={(value) => setContent(value ?? "")}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  lineNumbers: "on",
-                  wordWrap: "on",
-                  padding: { top: 16 },
-                  scrollBeyondLastLine: false,
-                  smoothScrolling: true,
-                  cursorBlinking: "smooth",
-                  renderWhitespace: "selection",
-                  bracketPairColorization: { enabled: true },
-                }}
-              />
+              <>
+                {/* Mobile fallback textarea — Monaco doesn't work on touch */}
+                <textarea
+                  className="lg:hidden block w-full h-full min-h-[400px] p-3 font-mono text-xs bg-background text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring border-0"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  spellCheck={false}
+                />
+                <div className="hidden lg:block h-full">
+                  <Editor
+                    height="100%"
+                    language="markdown"
+                    theme={resolvedTheme === "dark" ? "vs-dark" : "vs"}
+                    value={content}
+                    onChange={(value) => setContent(value ?? "")}
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      lineNumbers: "on",
+                      wordWrap: "on",
+                      padding: { top: 16 },
+                      scrollBeyondLastLine: false,
+                      smoothScrolling: true,
+                      cursorBlinking: "smooth",
+                      renderWhitespace: "selection",
+                      bracketPairColorization: { enabled: true },
+                    }}
+                  />
+                </div>
+              </>
             ) : (
               <div className="h-full overflow-y-auto">
                 <SkillVisualView content={content} />

@@ -207,23 +207,34 @@ export function FileEditorDialog({
               </div>
             </div>
           ) : (
-            <Editor
-              height="100%"
-              language={language}
-              value={content}
-              onChange={(v) => setContent(v ?? "")}
-              theme={resolvedTheme === "dark" ? "vs-dark" : "vs"}
-              options={{
-                fontSize: 13,
-                minimap: { enabled: false },
-                scrollBeyondLastLine: false,
-                wordWrap: language === "markdown" || language === "plaintext" ? "on" : "off",
-                lineNumbers: "on",
-                renderLineHighlight: "line",
-                tabSize: 2,
-                automaticLayout: true,
-              }}
-            />
+            <>
+              {/* Mobile: textarea fallback. Desktop: Monaco. */}
+              <textarea
+                className="lg:hidden block w-full h-full p-3 font-mono text-xs bg-background text-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring border-0"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                spellCheck={false}
+              />
+              <div className="hidden lg:block h-full">
+                <Editor
+                  height="100%"
+                  language={language}
+                  value={content}
+                  onChange={(v) => setContent(v ?? "")}
+                  theme={resolvedTheme === "dark" ? "vs-dark" : "vs"}
+                  options={{
+                    fontSize: 13,
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false,
+                    wordWrap: language === "markdown" || language === "plaintext" ? "on" : "off",
+                    lineNumbers: "on",
+                    renderLineHighlight: "line",
+                    tabSize: 2,
+                    automaticLayout: true,
+                  }}
+                />
+              </div>
+            </>
           )}
         </div>
 

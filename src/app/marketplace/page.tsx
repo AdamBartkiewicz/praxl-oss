@@ -534,7 +534,7 @@ function AllSkillsView({ onBack, onInstall }: { onBack: () => void; onInstall: (
     : allSkills;
 
   return (
-    <div className="mx-auto w-full max-w-5xl p-6 md:p-8 space-y-4">
+    <div className="mx-auto w-full max-w-5xl p-4 md:p-6 lg:p-8 space-y-4">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack} className="h-8">
           <ArrowLeft className="size-4" />
@@ -818,7 +818,7 @@ export default function MarketplacePage() {
   // Show creator detail
   if (selectedCreator) {
     return (
-      <div className="mx-auto w-full max-w-5xl p-6 md:p-8">
+      <div className="mx-auto w-full max-w-5xl p-4 md:p-6 lg:p-8">
         <CreatorDetailView
           creator={selectedCreator}
           onBack={() => setSelectedCreator(null)}
@@ -830,7 +830,7 @@ export default function MarketplacePage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6 p-6 md:p-8">
+    <div className="mx-auto w-full max-w-5xl space-y-6 p-4 md:p-6 lg:p-8">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">

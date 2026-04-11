@@ -1058,8 +1058,19 @@ export default function NewSkillPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
-          {/* Editor */}
-          <div className="rounded-lg border overflow-hidden min-h-[500px]">
+          {/* Editor — Monaco on desktop, textarea fallback on mobile.
+              Monaco doesn't work on touch devices (no pinch-zoom, soft
+              keyboard covers content, broken text selection). The
+              fallback is a basic monospace textarea — fine for quick
+              edits but desktop is recommended for serious skill writing. */}
+          <textarea
+            className="lg:hidden block w-full min-h-[400px] rounded-lg border p-3 font-mono text-xs bg-background text-foreground resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="# Your SKILL.md content..."
+            spellCheck={false}
+          />
+          <div className="hidden lg:block rounded-lg border overflow-hidden min-h-[500px]">
             <Editor
               height="500px"
               defaultLanguage="markdown"
@@ -1141,7 +1152,14 @@ export default function NewSkillPage() {
             </p>
           </div>
 
-          <div className="rounded-lg border overflow-hidden min-h-[500px]">
+          {/* Read-only preview — textarea fallback on mobile, Monaco on desktop */}
+          <textarea
+            className="lg:hidden block w-full min-h-[400px] rounded-lg border p-3 font-mono text-xs bg-background text-foreground resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+            value={fullContent}
+            readOnly
+            spellCheck={false}
+          />
+          <div className="hidden lg:block rounded-lg border overflow-hidden min-h-[500px]">
             <Editor
               height="500px"
               defaultLanguage="yaml"
@@ -1328,7 +1346,15 @@ export default function NewSkillPage() {
   const steps = [renderStep1, renderStep2, renderStep3, renderStep4, renderStep5];
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-6">
+    <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+      {/* Mobile disclaimer — Monaco editor is unusable on touch screens, so
+          warn users that creating skills is desktop-recommended. They can
+          still proceed (we have a textarea fallback) but expectations are set. */}
+      <div className="lg:hidden rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
+        💡 Skill editing is built for desktop. On mobile you get a basic
+        textarea — fine for quick edits, but the full Monaco editor with
+        syntax highlighting only loads on a larger screen.
+      </div>
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link

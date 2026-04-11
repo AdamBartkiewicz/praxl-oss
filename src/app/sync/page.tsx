@@ -333,7 +333,7 @@ function TargetsTable() {
         <CardTitle>Sync Targets</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
+        <div className="w-full overflow-x-auto"><Table>
           <TableHeader>
             <TableRow>
               <TableHead>Platform</TableHead>
@@ -413,7 +413,7 @@ function TargetsTable() {
               );
             })}
           </TableBody>
-        </Table>
+        </Table></div>
       </CardContent>
     </Card>
   );
@@ -488,7 +488,7 @@ function SyncLogsTable() {
         <CardTitle>Recent Sync Logs</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
+        <div className="w-full overflow-x-auto"><Table>
           <TableHeader>
             <TableRow>
               <TableHead>Timestamp</TableHead>
@@ -519,7 +519,7 @@ function SyncLogsTable() {
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+        </Table></div>
       </CardContent>
     </Card>
   );
@@ -1000,7 +1000,7 @@ function SkillDistribution() {
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
-          <Table>
+          <div className="w-full overflow-x-auto"><Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="min-w-[160px]">Skill</TableHead>
@@ -1117,7 +1117,7 @@ function SkillDistribution() {
                 );
               })}
             </TableBody>
-          </Table>
+          </Table></div>
         </div>
       </CardContent>
     </Card>

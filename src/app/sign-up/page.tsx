@@ -44,6 +44,12 @@ export default function SignUpPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-violet-500/5">
       <div className="flex flex-col items-center gap-8 w-full max-w-sm px-4">
+        {/* Mobile disclaimer — sign-in/sign-up work fine, but the rest of
+            Praxl (skill editing especially) is built for desktop. Tell
+            users upfront so they're not surprised after creating an account. */}
+        <div className="lg:hidden w-full rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300">
+          💡 Praxl works best on desktop. You can sign up and browse skills here, but creating and editing skills is built for a larger screen.
+        </div>
         <div className="flex flex-col items-center gap-2">
           <img src="/logo-light.png" alt="Praxl" className="h-10 dark:hidden" />
           <img src="/logo-dark.png" alt="Praxl" className="h-10 hidden dark:block" />

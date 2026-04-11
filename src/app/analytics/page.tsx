@@ -24,7 +24,7 @@ export default function AnalyticsPage() {
   // Free users: upsell page
   if (planQuery.data && !isPro) {
     return (
-      <div className="mx-auto max-w-4xl p-6 md:p-8 space-y-6">
+      <div className="mx-auto max-w-4xl p-4 md:p-6 lg:p-8 space-y-6">
         <div className="flex items-center gap-2">
           <BarChart3 className="size-5 text-muted-foreground" />
           <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
@@ -67,7 +67,7 @@ export default function AnalyticsPage() {
 
   if (!planQuery.data || dashboardQuery.isLoading) {
     return (
-      <div className="mx-auto max-w-5xl p-6 md:p-8 space-y-4">
+      <div className="mx-auto max-w-5xl p-4 md:p-6 lg:p-8 space-y-4">
         <div className="h-8 w-40 animate-pulse rounded bg-muted" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
@@ -80,7 +80,7 @@ export default function AnalyticsPage() {
 
   if (dashboardQuery.error) {
     return (
-      <div className="mx-auto max-w-5xl p-6 md:p-8 space-y-4">
+      <div className="mx-auto max-w-5xl p-4 md:p-6 lg:p-8 space-y-4">
         <div className="flex items-center gap-2">
           <BarChart3 className="size-5 text-muted-foreground" />
           <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
@@ -102,7 +102,7 @@ export default function AnalyticsPage() {
   const maxPlatformCount = Math.max(...data.syncsByPlatform.map((p) => p.count), 1);
 
   return (
-    <div className="mx-auto max-w-5xl p-6 md:p-8 space-y-8">
+    <div className="mx-auto max-w-5xl p-4 md:p-6 lg:p-8 space-y-8">
       <div className="flex items-center gap-2">
         <BarChart3 className="size-5 text-muted-foreground" />
         <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>

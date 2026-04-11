@@ -108,7 +108,7 @@ function GreetingHero() {
   const hasGithub = false; // GitHub connection checked via settings, not auth provider
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border bg-card p-6 md:p-8">
+    <div className="relative overflow-hidden rounded-2xl border bg-card p-4 md:p-6 lg:p-8">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
       <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -473,7 +473,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6 p-6 md:p-8">
+    <div className="mx-auto w-full max-w-5xl space-y-6 p-4 md:p-6 lg:p-8">
       {isEmpty ? (
         <OnboardingCard onImportClick={() => setImportOpen(true)} />
       ) : (
