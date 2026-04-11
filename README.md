@@ -108,14 +108,14 @@ npm run dev
 
 ```bash
 # Get your user ID after signing up
-docker compose exec db psql -U praxl -c "SELECT id, email FROM users;"
+docker compose exec db psql -U praxl -d praxl -c "SELECT id, email FROM users;"
 
-# Add to .env
+# Add to .env (only ONE line, server-side check via /api/auth/me)
 ADMIN_USER_IDS=your-user-id-here
-NEXT_PUBLIC_ADMIN_USER_IDS=your-user-id-here
 
-# Restart
-docker compose restart app
+# Recreate the container so the new env var is loaded.
+# (NOT `restart` — restart keeps the old environment.)
+docker compose up -d --force-recreate app
 ```
 
 ## CLI

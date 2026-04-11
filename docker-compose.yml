@@ -35,6 +35,11 @@ services:
     restart: "no"
 
   app:
+    # IMPORTANT: env_file is loaded into the container at CREATION time,
+    # not at restart. After editing .env you must recreate the container:
+    #   docker compose up -d --force-recreate app
+    # `docker compose restart app` does NOT re-read .env — it keeps the
+    # old environment. This is a Docker Compose behavior, not a Praxl bug.
     build: .
     restart: unless-stopped
     depends_on:

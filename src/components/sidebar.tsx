@@ -57,8 +57,6 @@ const sections = [
   },
 ];
 
-const ADMIN_USER_IDS = (process.env.NEXT_PUBLIC_ADMIN_USER_IDS || "").split(",").filter(Boolean);
-
 function UserSection() {
   const { user, isLoaded } = useUser();
 
@@ -176,7 +174,10 @@ export function Sidebar() {
   const { data: pendingChanges } = trpc.sync.pendingChanges.useQuery();
   const pendingCount = pendingChanges?.length ?? 0;
 
-  const isAdmin = currentUser?.id ? ADMIN_USER_IDS.includes(currentUser.id) : false;
+  // isAdmin comes from /api/auth/me (server-side check against ADMIN_USER_IDS).
+  // No NEXT_PUBLIC_* needed — changing the admin list is just an .env edit
+  // + `docker compose up -d --force-recreate app` + browser refresh.
+  const isAdmin = currentUser?.isAdmin ?? false;
 
   return (
     <aside
@@ -303,11 +304,10 @@ export function Sidebar() {
           <span className="text-[11px] text-muted-foreground/50 font-medium tracking-tight select-none">
             Praxl v1.0
           </span>
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground/50">
-            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-            <span className="opacity-50">·</span>
-            <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
-          </div>
+          {/* Privacy/Terms removed in OSS edition — these are only meaningful
+              for the managed cloud where there's a user/operator legal split.
+              In a self-hosted deployment, the operator IS the user, so there
+              is nothing to disclose. */}
           <Button
             variant="ghost"
             size="icon-sm"

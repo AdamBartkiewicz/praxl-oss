@@ -20,8 +20,6 @@ const PUBLIC_ROUTES = [
   "/api/cron/",
   "/api/auth/",
   "/api/clawhub",
-  "/terms",
-  "/privacy",
   "/changelog",
   "/help",
 ];

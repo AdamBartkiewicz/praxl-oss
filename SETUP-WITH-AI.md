@@ -222,28 +222,34 @@ The output looks like:
 
 Copy the UUID from the `id` column.
 
-6b. Set ADMIN_USER_IDS in .env. Both vars must be set to the SAME UUID
-because one is server-side and one is exposed to the client UI.
-Substitute the actual UUID directly into the sed command (don't rely on
-shell variables persisting between Bash tool calls):
+6b. Set ADMIN_USER_IDS in .env. There is only ONE variable to set —
+the admin flag is computed server-side from this and returned by
+/api/auth/me. The client never sees the raw list, so no NEXT_PUBLIC_*
+mirror is needed (this used to require a full image rebuild, fixed
+in commit 44258e1+).
 
-  Replace `YOUR-UUID-HERE` below with the actual UUID from step 6a.
+  Replace `YOUR-UUID-HERE` below with the actual UUID from step 6a:
 
-  macOS (run both lines):
+  macOS:
     sed -i '' "s|^ADMIN_USER_IDS=.*|ADMIN_USER_IDS=YOUR-UUID-HERE|" .env
-    sed -i '' "s|^NEXT_PUBLIC_ADMIN_USER_IDS=.*|NEXT_PUBLIC_ADMIN_USER_IDS=YOUR-UUID-HERE|" .env
 
-  Linux (run both lines):
+  Linux:
     sed -i "s|^ADMIN_USER_IDS=.*|ADMIN_USER_IDS=YOUR-UUID-HERE|" .env
-    sed -i "s|^NEXT_PUBLIC_ADMIN_USER_IDS=.*|NEXT_PUBLIC_ADMIN_USER_IDS=YOUR-UUID-HERE|" .env
 
 Verify:
-  grep ADMIN_USER_IDS .env
-  (both ADMIN_USER_IDS and NEXT_PUBLIC_ADMIN_USER_IDS should show the UUID)
+  grep ^ADMIN_USER_IDS .env
+  (should show ADMIN_USER_IDS=<the-uuid>, not empty)
 
-6c. Restart the app so the new env vars are picked up:
-  Docker:  docker compose restart app
-  Manual:  Ctrl+C the `npm run dev` process and run it again
+6c. Apply the new env var. IMPORTANT: this is NOT a `restart` —
+docker compose restart does NOT re-read env_file. You need to
+recreate the container so it picks up the new .env contents:
+
+  Docker:  docker compose up -d --force-recreate app
+  Manual:  Ctrl+C the `npm run dev` process and run `npm run dev` again
+
+(If you see the guide say `docker compose restart app` somewhere,
+it's wrong — restart keeps the old environment. The container must
+be recreated to re-read .env.)
 
 ⚠️ STOP HERE — USER ACTION REQUIRED ⚠️
 Tell the user: "I've enabled admin access. Hard-refresh your browser
