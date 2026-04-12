@@ -219,6 +219,7 @@ Honest comparisons with the strongest open-source competitors. Full per-tool det
 | [**rulesync**](https://praxl.app/compare/rulesync) (994⭐) | Visual editor, team workspaces, AI quality review, hosted cloud | 27 supported tools (vs 9), zero-infrastructure CLI, daily releases |
 | [**skillshare**](https://praxl.app/compare/skillshare) (1.4k⭐) | Bidirectional cloud sync, structural sandbox + opt-in trust paths, team layer | ~500-rule deterministic security audit (deepest in the category), 57 tools |
 | [**Manual / git**](https://praxl.app/compare/git-repos) | Auto-deploy to 9 tools, AI scoring, version diffs in UI | Zero dependencies, no server |
+| [**Skills Manager**](https://praxl.app/compare/skills-manager) (500⭐) | 9 tools (vs 3 built-in), cloud sync, version history, AI review, teams | Native desktop app, no account needed, MIT license |
 | [**.cursorrules**](https://praxl.app/compare/cursorrules) | Beyond a single file per project; modular, reusable, multi-tool | Native Cursor integration, no setup |
 
 The most defensible setup for many teams is **running both** Praxl and skillshare — Praxl for the lifecycle and team layer, skillshare's audit engine for content scanning. We're complementary.
