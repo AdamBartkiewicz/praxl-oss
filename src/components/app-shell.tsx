@@ -37,6 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <WorkspaceProvider>
+    <div className="noise-overlay" />
     <div className="flex min-h-full">
       {showSidebar && (
         <>

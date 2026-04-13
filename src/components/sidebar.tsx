@@ -232,27 +232,19 @@ export function Sidebar() {
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                       isActive
                         ? [
-                            "text-foreground",
-                            "bg-primary/10 dark:bg-primary/15",
-                            "shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]",
+                            "text-foreground font-semibold",
+                            "bg-primary/12 dark:bg-primary/18",
+                            "border-l-[3px] border-l-primary",
+                            "shadow-sm",
                           ]
                         : [
                             "text-muted-foreground",
                             "hover:text-foreground",
                             "hover:bg-accent/40 dark:hover:bg-accent/25",
+                            "border-l-[3px] border-l-transparent",
                           ]
                     )}
                   >
-                    {/* Active indicator bar */}
-                    <div
-                      className={cn(
-                        "absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-full",
-                        "transition-all duration-300 ease-out",
-                        isActive
-                          ? "h-4 bg-primary opacity-100"
-                          : "h-0 bg-primary opacity-0 group-hover/nav:h-2.5 group-hover/nav:opacity-40"
-                      )}
-                    />
                     <item.icon
                       className={cn(
                         "w-4 h-4 shrink-0 transition-colors duration-200",

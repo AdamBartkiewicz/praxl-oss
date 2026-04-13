@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, DM_Mono } from "next/font/google";
+import { Outfit, DM_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { AppShell } from "@/components/app-shell";
@@ -8,7 +8,7 @@ import { ThemeProvider } from "next-themes";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-const plusJakarta = Plus_Jakarta_Sans({
+const outfit = Outfit({
   variable: "--font-sans",
   subsets: ["latin", "latin-ext"],
 });
@@ -67,10 +67,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${plusJakarta.variable} ${dmMono.variable} h-full antialiased`}
+      className={`${outfit.variable} ${dmMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full bg-background text-foreground">
+      <body className="min-h-full bg-background text-foreground bg-grid-subtle">
         <script dangerouslySetInnerHTML={{ __html: `
           window.onerror=function(m,u,l,c,e){fetch("/api/errors",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:m,stack:e?.stack||"",url:u})}).catch(function(){})};
           window.onunhandledrejection=function(e){fetch("/api/errors",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:String(e.reason),stack:e.reason?.stack||""})}).catch(function(){})};

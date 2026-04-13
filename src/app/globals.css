@@ -85,22 +85,22 @@
 }
 
 .dark {
-  --background: #0f0e0c;
+  --background: #0c0b0a;
   --foreground: #f0ebe3;
-  --card: #1c1a17;
+  --card: #1a1816;
   --card-foreground: #f0ebe3;
-  --popover: #1c1a17;
+  --popover: #1a1816;
   --popover-foreground: #f0ebe3;
   --primary: #d4734e;
   --primary-foreground: #ffffff;
-  --secondary: #242220;
+  --secondary: #262320;
   --secondary-foreground: #c4bdb3;
-  --muted: #242220;
+  --muted: #262320;
   --muted-foreground: #8a8279;
-  --accent: #242220;
+  --accent: #262320;
   --accent-foreground: #c4bdb3;
   --destructive: #e85d5d;
-  --border: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.12);
   --ring: #d4734e;
   --chart-1: #d4734e;
@@ -108,13 +108,13 @@
   --chart-3: #e5a832;
   --chart-4: #5a8fc4;
   --chart-5: #8b3a2a;
-  --sidebar: #171613;
+  --sidebar: #131210;
   --sidebar-foreground: #f0ebe3;
   --sidebar-primary: #d4734e;
-  --sidebar-primary-foreground: #0f0e0c;
-  --sidebar-accent: #2a2825;
+  --sidebar-primary-foreground: #0c0b0a;
+  --sidebar-accent: #2c2a27;
   --sidebar-accent-foreground: #c4bdb3;
-  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: #d4734e;
 }
 
@@ -127,8 +127,45 @@
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
   html {
     @apply font-sans;
   }
+}
+
+/* ─── Visual texture: noise overlay (matching landing page) ───── */
+.noise-overlay {
+  position: fixed;
+  inset: 0;
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* ─── Background grid pattern ──────────────────────────────────── */
+.bg-grid-subtle {
+  background-image:
+    linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.dark .bg-grid-subtle {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+}
+
+/* ─── Shimmer loading animation ────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.06) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
 }
