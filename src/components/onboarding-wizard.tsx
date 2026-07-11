@@ -98,9 +98,11 @@ function CliConnectStep({ online, onSkip, onRefresh }: { online: boolean; onSkip
   const [copied, setCopied] = useState("");
   const [token, setToken] = useState<string | null>(null);
   const [generatingToken, setGeneratingToken] = useState(false);
+  const [limitReached, setLimitReached] = useState(false);
 
   const generateToken = async () => {
     setGeneratingToken(true);
+    setLimitReached(false);
     try {
       const res = await fetch("/api/cli/token", {
         method: "POST",
@@ -109,6 +111,12 @@ function CliConnectStep({ online, onSkip, onRefresh }: { online: boolean; onSkip
         body: JSON.stringify({ name: "Onboarding" }),
       });
       const data = await res.json();
+      // The token cap is reachable here but this flow has no revoke UI, so send
+      // the user to Settings instead of surfacing a raw error they can't act on.
+      if (res.status === 409) {
+        setLimitReached(true);
+        return;
+      }
       if (!res.ok) throw new Error(data.error || "Failed to generate CLI token");
       setToken(data.token);
     } catch (error) {
@@ -175,6 +183,13 @@ function CliConnectStep({ online, onSkip, onRefresh }: { online: boolean; onSkip
               {generatingToken ? <Loader2 className="size-3.5 animate-spin" /> : <Terminal className="size-3.5" />}
               Generate connection token
             </Button>
+          )}
+          {limitReached && (
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              You&apos;ve reached the maximum number of CLI tokens.{" "}
+              <Link href="/settings" className="underline underline-offset-2">Revoke an unused one in Settings</Link>{" "}
+              then try again.
+            </p>
           )}
           <div className="flex items-center gap-2 rounded-lg bg-muted/50 border px-3 py-2">
             <code className="flex-1 text-xs font-mono truncate">{connectCmd}</code>

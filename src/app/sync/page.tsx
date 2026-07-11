@@ -561,6 +561,7 @@ function CliSetupCard() {
   const [copied, setCopied] = React.useState<string | null>(null);
   const [token, setToken] = React.useState<string | null>(null);
   const [generatingToken, setGeneratingToken] = React.useState(false);
+  const [limitReached, setLimitReached] = React.useState(false);
   const copy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopied(id);
@@ -569,6 +570,7 @@ function CliSetupCard() {
 
   const generateToken = async () => {
     setGeneratingToken(true);
+    setLimitReached(false);
     try {
       const res = await fetch("/api/cli/token", {
         method: "POST",
@@ -577,6 +579,12 @@ function CliSetupCard() {
         body: JSON.stringify({ name: "Sync setup" }),
       });
       const data = await res.json();
+      // The token cap is reachable here but this card has no revoke UI, so send
+      // the user to Settings instead of surfacing a raw error they can't act on.
+      if (res.status === 409) {
+        setLimitReached(true);
+        return;
+      }
       if (!res.ok) throw new Error(data.error || "Failed to generate CLI token");
       setToken(data.token);
     } catch (error) {
@@ -611,6 +619,13 @@ function CliSetupCard() {
             {generatingToken ? <Loader2 className="size-3.5 animate-spin" /> : <Terminal className="size-3.5" />}
             Generate connection token
           </Button>
+        )}
+        {limitReached && (
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            You&apos;ve reached the maximum number of CLI tokens.{" "}
+            <Link href="/settings" className="underline underline-offset-2">Revoke an unused one in Settings</Link>{" "}
+            then try again.
+          </p>
         )}
         {token && (
           <p className="text-xs text-amber-700 dark:text-amber-300">
