@@ -97,13 +97,26 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 function CliConnectStep({ online, onSkip, onRefresh }: { online: boolean; onSkip: () => void; onRefresh: () => void }) {
   const [copied, setCopied] = useState("");
   const [token, setToken] = useState<string | null>(null);
+  const [generatingToken, setGeneratingToken] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/cli/token", { credentials: "include" })
-      .then(r => r.json())
-      .then(d => setToken(d.token))
-      .catch(() => {});
-  }, []);
+  const generateToken = async () => {
+    setGeneratingToken(true);
+    try {
+      const res = await fetch("/api/cli/token", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Onboarding" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to generate CLI token");
+      setToken(data.token);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to generate CLI token");
+    } finally {
+      setGeneratingToken(false);
+    }
+  };
 
   const copyCmd = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -130,7 +143,7 @@ function CliConnectStep({ online, onSkip, onRefresh }: { online: boolean; onSkip
 
   const appUrl = typeof window !== "undefined" ? window.location.origin : "";
   const urlFlag = appUrl && !appUrl.includes("MANAGED_CLOUD_URL") ? ` --url ${appUrl}` : "";
-  const connectCmd = token ? `praxl connect --token ${token}${urlFlag}` : `praxl connect${urlFlag}`;
+  const connectCmd = token ? `praxl connect --token ${token}${urlFlag}` : `praxl connect --token <YOUR_TOKEN>${urlFlag}`;
 
   return (
     <Card>
@@ -157,9 +170,15 @@ function CliConnectStep({ online, onSkip, onRefresh }: { online: boolean; onSkip
 
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground">2. Connect and sync (auto-imports your skills)</p>
+          {!token && (
+            <Button variant="outline" size="sm" onClick={generateToken} disabled={generatingToken}>
+              {generatingToken ? <Loader2 className="size-3.5 animate-spin" /> : <Terminal className="size-3.5" />}
+              Generate connection token
+            </Button>
+          )}
           <div className="flex items-center gap-2 rounded-lg bg-muted/50 border px-3 py-2">
             <code className="flex-1 text-xs font-mono truncate">{connectCmd}</code>
-            <button onClick={() => copyCmd(connectCmd, "connect")} className="text-muted-foreground hover:text-foreground shrink-0">
+            <button disabled={!token} onClick={() => copyCmd(connectCmd, "connect")} className="text-muted-foreground hover:text-foreground shrink-0 disabled:opacity-50">
               {copied === "connect" ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
             </button>
           </div>

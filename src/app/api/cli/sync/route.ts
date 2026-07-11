@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { skills, skillFiles, skillVersions, skillTargetAssignments, syncTargets, syncLog, users } from "@/db/schema";
+import { skillFiles, skillVersions, syncTargets, syncLog, users } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { rateLimiter } from "@/lib/rate-limit";
+import { authenticateCliRequest } from "@/lib/cli-auth";
 
 // GET: Returns skills with deployed version content per platform
 export async function GET(request: NextRequest) {
-  const token = request.headers.get("x-praxl-token");
-  if (!token) return NextResponse.json({ error: "x-praxl-token header required" }, { status: 401 });
+  const auth = await authenticateCliRequest(request);
+  if (!auth.ok) return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
 
-  const user = await db.query.users.findFirst({ where: eq(users.id, token) });
-  if (!user) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  const user = await db.query.users.findFirst({ where: eq(users.id, auth.userId) });
+  if (!user) return NextResponse.json({ error: "Token owner not found" }, { status: 401 });
 
-  const rl = rateLimiter.check(`cli:sync:${token}`, 60, 60 * 60 * 1000);
+  const rl = rateLimiter.check(`cli:sync:${auth.userId}`, 60, 60 * 60 * 1000);
   if (!rl.allowed) {
     return NextResponse.json({ error: "Rate limited" }, { status: 429 });
   }
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
 
   // Get user's targets
   const userTargets = await db.query.syncTargets.findMany({
-    where: eq(syncTargets.userId, token),
+    where: eq(syncTargets.userId, auth.userId),
   });
 
   // Get all assignments with deployed versions

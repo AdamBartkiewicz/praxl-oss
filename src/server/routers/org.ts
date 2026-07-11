@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { router, authedProcedure, mutationProcedure } from "../trpc";
 import { db } from "@/db";
-import { organizations, orgMembers, orgInvites, users, skills, projects } from "@/db/schema";
+import { organizations, orgMembers, orgInvites, skills, projects } from "@/db/schema";
 import { eq, and, count } from "drizzle-orm";
 
 import { v4 as uuid } from "uuid";
@@ -153,10 +153,28 @@ export const orgRouter = router({
     });
     if (!membership) throw new TRPCError({ code: "FORBIDDEN" });
 
-    return db.query.orgMembers.findMany({
+    const members = await db.query.orgMembers.findMany({
       where: eq(orgMembers.orgId, input),
-      with: { user: true },
+      with: {
+        user: {
+          columns: {
+            id: true,
+            email: true,
+            name: true,
+            imageUrl: true,
+          },
+        },
+      },
     });
+
+    return members.map((member) => ({
+      id: member.id,
+      orgId: member.orgId,
+      userId: member.userId,
+      role: member.role,
+      joinedAt: member.joinedAt,
+      user: member.user,
+    }));
   }),
 
   removeMember: mutationProcedure

@@ -560,20 +560,33 @@ function SyncAllButton() {
 function CliSetupCard() {
   const [copied, setCopied] = React.useState<string | null>(null);
   const [token, setToken] = React.useState<string | null>(null);
+  const [generatingToken, setGeneratingToken] = React.useState(false);
   const copy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopied(id);
     setTimeout(() => setCopied(null), 2000);
   };
 
-  React.useEffect(() => {
-    fetch("/api/cli/token", { credentials: "include" })
-      .then(r => r.json())
-      .then(d => { if (d.token) setToken(d.token); })
-      .catch(() => {});
-  }, []);
+  const generateToken = async () => {
+    setGeneratingToken(true);
+    try {
+      const res = await fetch("/api/cli/token", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Sync setup" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to generate CLI token");
+      setToken(data.token);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to generate CLI token");
+    } finally {
+      setGeneratingToken(false);
+    }
+  };
 
-  const connectCmd = token ? `praxl connect --token ${token}` : "praxl connect";
+  const connectCmd = token ? `praxl connect --token ${token}` : "praxl connect --token <YOUR_TOKEN>";
 
   const steps = [
     { cmd: "npm install -g praxl-app", desc: "Install the Praxl CLI globally (one time)." },
@@ -593,6 +606,17 @@ function CliSetupCard() {
         <p className="text-sm text-muted-foreground">
           Use the Praxl CLI to keep local skill folders in sync. Works with Claude Code, Cursor, Codex, and more.
         </p>
+        {!token && (
+          <Button variant="outline" size="sm" onClick={generateToken} disabled={generatingToken}>
+            {generatingToken ? <Loader2 className="size-3.5 animate-spin" /> : <Terminal className="size-3.5" />}
+            Generate connection token
+          </Button>
+        )}
+        {token && (
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            This token is shown once. Copy the connect command before leaving this page.
+          </p>
+        )}
         <div className="space-y-2">
           {steps.map((step, i) => (
             <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">

@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { db } from "@/db";
-import { appSettings, users } from "@/db/schema";
+import { appSettings } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
+import { authenticateCliRequest, CLI_TOKEN_HEADER } from "@/lib/cli-auth";
 
 export async function POST(request: NextRequest) {
   // Support both web (session) and CLI (token header)
   let userId: string | null = null;
 
-  const token = request.headers.get("x-praxl-token");
-  if (token) {
-    const user = await db.query.users.findFirst({ where: eq(users.id, token) });
-    if (user) userId = user.id;
+  const calledFromCli = Boolean(request.headers.get(CLI_TOKEN_HEADER));
+  if (calledFromCli) {
+    const auth = await authenticateCliRequest(request);
+    if (!auth.ok) return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
+    userId = auth.userId;
   }
 
-  if (!userId) {
+  if (!calledFromCli) {
     const session = await getSession();
     userId = session?.userId ?? null;
   }
@@ -29,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     // If called from web, send disconnect command to CLI
     // If called from CLI itself, no need (CLI is already exiting)
-    if (!token) {
+    if (!calledFromCli) {
       const existing = await db.query.appSettings.findFirst({
         where: and(eq(appSettings.key, "cli_pending_sync"), eq(appSettings.userId, userId)),
       });

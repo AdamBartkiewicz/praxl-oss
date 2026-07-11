@@ -12,6 +12,19 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const cliTokens = pgTable("cli_tokens", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull().default("CLI token"),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+  tokenPrefix: varchar("token_prefix", { length: 24 }).notNull(),
+  scopes: jsonb("scopes").$type<string[]>().notNull().default(["cli"]),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  lastUsedAt: timestamp("last_used_at"),
+  expiresAt: timestamp("expires_at"),
+  revokedAt: timestamp("revoked_at"),
+});
+
 export const organizations = pgTable("organizations", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -265,8 +278,13 @@ export const marketplaceSkills = pgTable("marketplace_skills", {
 export const usersRelations = relations(users, ({ many }) => ({
   skills: many(skills),
   projects: many(projects),
+  cliTokens: many(cliTokens),
   orgMemberships: many(orgMembers),
   ownedOrgs: many(organizations),
+}));
+
+export const cliTokensRelations = relations(cliTokens, ({ one }) => ({
+  user: one(users, { fields: [cliTokens.userId], references: [users.id] }),
 }));
 
 export const organizationsRelations = relations(organizations, ({ one, many }) => ({

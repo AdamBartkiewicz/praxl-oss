@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { skillUsageEvents } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { authenticateCliRequest } from "@/lib/cli-auth";
 
 // Auto-migrate
 async function ensureTable() {
@@ -24,16 +25,16 @@ ensureTable();
 
 // DELETE /api/cli/usage - clear all usage events for this user
 export async function DELETE(request: NextRequest) {
-  const token = request.headers.get("x-praxl-token");
-  if (!token) return NextResponse.json({ error: "Missing token" }, { status: 401 });
-  await db.delete(skillUsageEvents).where(eq(skillUsageEvents.userId, token));
+  const auth = await authenticateCliRequest(request);
+  if (!auth.ok) return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
+  await db.delete(skillUsageEvents).where(eq(skillUsageEvents.userId, auth.userId));
   return NextResponse.json({ cleared: true });
 }
 
 // POST /api/cli/usage - receive batched usage events from CLI
 export async function POST(request: NextRequest) {
-  const token = request.headers.get("x-praxl-token");
-  if (!token) return NextResponse.json({ error: "Missing token" }, { status: 401 });
+  const auth = await authenticateCliRequest(request);
+  if (!auth.ok) return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
 
   try {
     const body = await request.json();
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     await db.insert(skillUsageEvents).values(
       batch.map((e) => ({
-        userId: token,
+        userId: auth.userId,
         skillSlug: e.slug,
         platform: e.platform,
         usedAt: new Date(e.usedAt),

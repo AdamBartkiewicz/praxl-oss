@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { localSkillState, users } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { localSkillState } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { authenticateCliRequest } from "@/lib/cli-auth";
 
 // CLI reports what skills exist locally per platform
 export async function POST(request: NextRequest) {
-  const token = request.headers.get("x-praxl-token");
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const user = await db.query.users.findFirst({ where: eq(users.id, token) });
-  if (!user) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  const auth = await authenticateCliRequest(request);
+  if (!auth.ok) return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
 
   const body = await request.json();
   const { skills: localSkills } = body as {
@@ -19,13 +17,13 @@ export async function POST(request: NextRequest) {
   if (!localSkills) return NextResponse.json({ error: "skills array required" }, { status: 400 });
 
   // Clear old state for this user
-  await db.delete(localSkillState).where(eq(localSkillState.userId, token));
+  await db.delete(localSkillState).where(eq(localSkillState.userId, auth.userId));
 
   // Insert new state
   if (localSkills.length > 0) {
     await db.insert(localSkillState).values(
       localSkills.map((s) => ({
-        userId: token,
+        userId: auth.userId,
         platform: s.platform,
         slug: s.slug,
         localPath: s.localPath,
