@@ -889,6 +889,7 @@ function SkillDistribution() {
 
   // GitHub column state
   const [ghSlugs, setGhSlugs] = useState<string[]>([]);
+  const [ghSlugsSource, setGhSlugsSource] = useState<string | null>(null);
   const [ghRemoteSlugs, setGhRemoteSlugs] = useState<string[]>([]);
   const [ghConnected, setGhConnected] = useState(false);
   const ghRepo = trpc.settings.get.useQuery("github_repo");
@@ -909,15 +910,18 @@ function SkillDistribution() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (ghAssignments.data) {
-      try {
-        setGhSlugs(JSON.parse(ghAssignments.data));
-      } catch {
-        setGhSlugs([]);
-      }
+  // Seed the editable local selection from the saved assignment whenever the
+  // server value changes. Done during render (tracking the last-seeded source)
+  // instead of in an effect, which trips react-hooks/set-state-in-effect and
+  // adds an extra render pass.
+  if (ghAssignments.data && ghAssignments.data !== ghSlugsSource) {
+    setGhSlugsSource(ghAssignments.data);
+    try {
+      setGhSlugs(JSON.parse(ghAssignments.data));
+    } catch {
+      setGhSlugs([]);
     }
-  }, [ghAssignments.data]);
+  }
 
   function toggleGithub(slug: string, currentlyAssigned: boolean) {
     const newSlugs = currentlyAssigned

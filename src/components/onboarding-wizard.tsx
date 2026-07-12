@@ -35,11 +35,12 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const cliOnline = cliStatus.data?.online ?? false;
   const hasSkills = (stats?.total ?? 0) > 0;
 
-  // Auto-advance
-  useEffect(() => {
-    if (cliOnline && step === 0) setStep(1);
-    if (hasSkills && step < 1) setStep(1);
-  }, [cliOnline, hasSkills, step]);
+  // Auto-advance: latch forward to step 1 once the CLI connects or skills appear
+  // (the Skip button advances too). Done during render — a guarded setState that
+  // fires once — rather than in an effect, which would add a second render pass.
+  if (step === 0 && (cliOnline || hasSkills)) {
+    setStep(1);
+  }
 
   // Complete when skills exist
   useEffect(() => {
