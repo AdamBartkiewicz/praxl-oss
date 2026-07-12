@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { skills, skillVersions, syncTargets, skillTargetAssignments, users } from "@/db/schema";
+import { skills, skillVersions, syncTargets, skillTargetAssignments } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
+import { authenticateCliRequest } from "@/lib/cli-auth";
 
 const PLATFORM_LABELS: Record<string, string> = {
   "claude-code": "Claude Code",
@@ -28,11 +29,9 @@ const PLATFORM_PATHS: Record<string, string> = {
 
 // CLI pushes local skill content for batch import
 export async function POST(request: NextRequest) {
-  const token = request.headers.get("x-praxl-token");
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const user = await db.query.users.findFirst({ where: eq(users.id, token) });
-  if (!user) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  const auth = await authenticateCliRequest(request);
+  if (!auth.ok) return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
+  const { userId } = auth;
 
   const body = await request.json();
   const items = body.skills as Array<{
@@ -62,13 +61,13 @@ export async function POST(request: NextRequest) {
 
   for (const platform of discoveredPlatforms) {
     const existing = await db.query.syncTargets.findFirst({
-      where: and(eq(syncTargets.userId, token), eq(syncTargets.platform, platform)),
+      where: and(eq(syncTargets.userId, userId), eq(syncTargets.platform, platform)),
     });
     if (!existing) {
       const targetId = uuid();
       await db.insert(syncTargets).values({
         id: targetId,
-        userId: token,
+        userId,
         platform,
         label: PLATFORM_LABELS[platform] || platform,
         basePath: PLATFORM_PATHS[platform] || "",
@@ -81,7 +80,7 @@ export async function POST(request: NextRequest) {
 
   // Re-fetch all user targets for assignment
   const userTargets = await db.query.syncTargets.findMany({
-    where: eq(syncTargets.userId, token),
+    where: eq(syncTargets.userId, userId),
   });
   const targetByPlatform = Object.fromEntries(userTargets.map((t) => [t.platform, t]));
 
@@ -89,7 +88,7 @@ export async function POST(request: NextRequest) {
   let imported = 0;
   for (const item of filteredItems.slice(0, 200)) {
     const existing = await db.query.skills.findFirst({
-      where: and(eq(skills.slug, item.slug), eq(skills.userId, token)),
+      where: and(eq(skills.slug, item.slug), eq(skills.userId, userId)),
     });
     if (existing) {
       // Skill exists - just ensure it's assigned to this platform's target
@@ -117,7 +116,7 @@ export async function POST(request: NextRequest) {
 
     await db.insert(skills).values({
       id,
-      userId: token,
+      userId,
       slug: item.slug,
       name: item.name || item.slug,
       description,

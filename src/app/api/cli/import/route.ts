@@ -4,18 +4,16 @@ import { db } from "@/db";
 import { skills, skillVersions, skillFiles, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { rateLimiter } from "@/lib/rate-limit";
+import { authenticateCliRequest, CLI_TOKEN_HEADER } from "@/lib/cli-auth";
 
 export async function POST(request: NextRequest) {
   // Check auth - either session cookie or API token
-  const apiToken = request.headers.get("x-praxl-token");
+  const apiToken = request.headers.get(CLI_TOKEN_HEADER);
   let userId: string | null = null;
 
   if (apiToken) {
-    // Token-based auth (from CLI)
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, apiToken),
-    });
-    if (user) userId = user.id;
+    const auth = await authenticateCliRequest(request);
+    if (auth.ok) userId = auth.userId;
   } else {
     // Session-based auth (from browser)
     try {
@@ -111,20 +109,18 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ imported, skipped, total: importSkills.length });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Import failed" }, { status: 500 });
   }
 }
 
 // GET endpoint returns user info for token verification
 export async function GET(request: NextRequest) {
-  const apiToken = request.headers.get("x-praxl-token");
-  if (!apiToken) {
-    return NextResponse.json({ error: "Pass x-praxl-token header" }, { status: 401 });
-  }
+  const auth = await authenticateCliRequest(request);
+  if (!auth.ok) return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
 
   const user = await db.query.users.findFirst({
-    where: eq(users.id, apiToken),
+    where: eq(users.id, auth.userId),
   });
 
   if (!user) {

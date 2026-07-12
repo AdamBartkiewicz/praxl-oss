@@ -35,11 +35,12 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const cliOnline = cliStatus.data?.online ?? false;
   const hasSkills = (stats?.total ?? 0) > 0;
 
-  // Auto-advance
-  useEffect(() => {
-    if (cliOnline && step === 0) setStep(1);
-    if (hasSkills && step < 1) setStep(1);
-  }, [cliOnline, hasSkills, step]);
+  // Auto-advance: latch forward to step 1 once the CLI connects or skills appear
+  // (the Skip button advances too). Done during render — a guarded setState that
+  // fires once — rather than in an effect, which would add a second render pass.
+  if (step === 0 && (cliOnline || hasSkills)) {
+    setStep(1);
+  }
 
   // Complete when skills exist
   useEffect(() => {
@@ -97,13 +98,34 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 function CliConnectStep({ online, onSkip, onRefresh }: { online: boolean; onSkip: () => void; onRefresh: () => void }) {
   const [copied, setCopied] = useState("");
   const [token, setToken] = useState<string | null>(null);
+  const [generatingToken, setGeneratingToken] = useState(false);
+  const [limitReached, setLimitReached] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/cli/token", { credentials: "include" })
-      .then(r => r.json())
-      .then(d => setToken(d.token))
-      .catch(() => {});
-  }, []);
+  const generateToken = async () => {
+    setGeneratingToken(true);
+    setLimitReached(false);
+    try {
+      const res = await fetch("/api/cli/token", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Onboarding" }),
+      });
+      const data = await res.json();
+      // The token cap is reachable here but this flow has no revoke UI, so send
+      // the user to Settings instead of surfacing a raw error they can't act on.
+      if (res.status === 409) {
+        setLimitReached(true);
+        return;
+      }
+      if (!res.ok) throw new Error(data.error || "Failed to generate CLI token");
+      setToken(data.token);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to generate CLI token");
+    } finally {
+      setGeneratingToken(false);
+    }
+  };
 
   const copyCmd = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -130,7 +152,7 @@ function CliConnectStep({ online, onSkip, onRefresh }: { online: boolean; onSkip
 
   const appUrl = typeof window !== "undefined" ? window.location.origin : "";
   const urlFlag = appUrl && !appUrl.includes("MANAGED_CLOUD_URL") ? ` --url ${appUrl}` : "";
-  const connectCmd = token ? `praxl connect --token ${token}${urlFlag}` : `praxl connect${urlFlag}`;
+  const connectCmd = token ? `praxl connect --token ${token}${urlFlag}` : `praxl connect --token <YOUR_TOKEN>${urlFlag}`;
 
   return (
     <Card>
@@ -157,9 +179,22 @@ function CliConnectStep({ online, onSkip, onRefresh }: { online: boolean; onSkip
 
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground">2. Connect and sync (auto-imports your skills)</p>
+          {!token && (
+            <Button variant="outline" size="sm" onClick={generateToken} disabled={generatingToken}>
+              {generatingToken ? <Loader2 className="size-3.5 animate-spin" /> : <Terminal className="size-3.5" />}
+              Generate connection token
+            </Button>
+          )}
+          {limitReached && (
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              You&apos;ve reached the maximum number of CLI tokens.{" "}
+              <Link href="/settings" className="underline underline-offset-2">Revoke an unused one in Settings</Link>{" "}
+              then try again.
+            </p>
+          )}
           <div className="flex items-center gap-2 rounded-lg bg-muted/50 border px-3 py-2">
             <code className="flex-1 text-xs font-mono truncate">{connectCmd}</code>
-            <button onClick={() => copyCmd(connectCmd, "connect")} className="text-muted-foreground hover:text-foreground shrink-0">
+            <button disabled={!token} onClick={() => copyCmd(connectCmd, "connect")} className="text-muted-foreground hover:text-foreground shrink-0 disabled:opacity-50">
               {copied === "connect" ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
             </button>
           </div>

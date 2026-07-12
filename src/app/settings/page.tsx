@@ -454,63 +454,136 @@ function BillingSection() {
   );
 }
 
-function CliTokenSection() {
+type CliTokenMetadata = {
+  id: string;
+  name: string;
+  tokenPrefix: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+};
+
+function CliTokenCard() {
   const [token, setToken] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  async function handleReveal() {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/cli/token");
-      const data = await res.json();
-      if (data.token) setToken(data.token);
-    } catch (e) {
-      toast.error("Failed to get CLI token");
-    }
-    setLoading(false);
-  }
-
-  if (!token) {
-    return (
-      <Button variant="outline" size="sm" onClick={handleReveal} disabled={loading}>
-        {loading ? <Loader2 className="size-3.5 animate-spin" /> : <Key className="size-3.5" />}
-        Reveal CLI Token
-      </Button>
-    );
-  }
 
   return (
-    <div className="flex items-center gap-2">
-      <code className="flex-1 rounded bg-muted px-3 py-2 font-mono text-xs select-all truncate">
-        {token}
-      </code>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          navigator.clipboard.writeText(token);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        }}
-      >
-        {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
-        {copied ? "Copied" : "Copy"}
-      </Button>
+    <div className="space-y-3">
+      <CliTokenSection onTokenCreated={setToken} />
+      <CliCommandsSection token={token} />
     </div>
   );
 }
 
-function CliCommandsSection() {
+function CliTokenSection({ onTokenCreated }: { onTokenCreated: (token: string | null) => void }) {
   const [token, setToken] = useState<string | null>(null);
-  const [copied, setCopied] = useState<string | null>(null);
+  const [tokens, setTokens] = useState<CliTokenMetadata[]>([]);
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  async function loadTokens() {
+    const res = await fetch("/api/cli/token", { credentials: "include" });
+    if (!res.ok) throw new Error("Failed to list CLI tokens");
+    const data = await res.json();
+    setTokens(data.tokens || []);
+  }
 
   useEffect(() => {
-    fetch("/api/cli/token", { credentials: "include" })
-      .then(r => r.json())
-      .then(d => { if (d.token) setToken(d.token); })
-      .catch(() => {});
+    loadTokens().catch(() => toast.error("Failed to list CLI tokens"));
   }, []);
+
+  async function handleGenerate() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/cli/token", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Praxl CLI" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to generate CLI token");
+      setToken(data.token);
+      onTokenCreated(data.token);
+      await loadTokens();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to generate CLI token");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleRevoke(id: string) {
+    try {
+      const res = await fetch("/api/cli/token", {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) throw new Error("Failed to revoke CLI token");
+      await loadTokens();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to revoke CLI token");
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <Button variant="outline" size="sm" onClick={handleGenerate} disabled={loading}>
+        {loading ? <Loader2 className="size-3.5 animate-spin" /> : <Key className="size-3.5" />}
+        Generate CLI Token
+      </Button>
+
+      {token && (
+        <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            Copy this token now. For security, it will not be shown again.
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 rounded bg-muted px-3 py-2 font-mono text-xs select-all truncate">
+              {token}
+            </code>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(token);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+            >
+              {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
+              {copied ? "Copied" : "Copy"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {tokens.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium">Active tokens</p>
+          {tokens.map((item) => (
+            <div key={item.id} className="flex items-center gap-3 rounded-md border px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-medium">{item.name}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {item.tokenPrefix} · created {new Date(item.createdAt).toLocaleDateString()}
+                  {item.lastUsedAt ? ` · last used ${new Date(item.lastUsedAt).toLocaleDateString()}` : " · never used"}
+                </p>
+              </div>
+              <Button variant="ghost" size="icon-sm" onClick={() => handleRevoke(item.id)} aria-label={`Revoke ${item.name}`}>
+                <Trash2 className="size-3.5 text-destructive" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CliCommandsSection({ token }: { token: string | null }) {
+  const [copied, setCopied] = useState<string | null>(null);
 
   const copy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -518,7 +591,7 @@ function CliCommandsSection() {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const connectCmd = token ? `praxl connect --token ${token}` : "praxl connect";
+  const connectCmd = token ? `praxl connect --token ${token}` : "praxl connect --token <YOUR_TOKEN>";
 
   const cmds = [
     { id: "install", label: "1. Install CLI", cmd: "npm install -g praxl-app" },
@@ -837,8 +910,7 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <CliTokenSection />
-          <CliCommandsSection />
+          <CliTokenCard />
         </CardContent>
       </Card>
 

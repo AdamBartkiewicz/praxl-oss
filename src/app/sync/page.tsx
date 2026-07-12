@@ -560,20 +560,41 @@ function SyncAllButton() {
 function CliSetupCard() {
   const [copied, setCopied] = React.useState<string | null>(null);
   const [token, setToken] = React.useState<string | null>(null);
+  const [generatingToken, setGeneratingToken] = React.useState(false);
+  const [limitReached, setLimitReached] = React.useState(false);
   const copy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopied(id);
     setTimeout(() => setCopied(null), 2000);
   };
 
-  React.useEffect(() => {
-    fetch("/api/cli/token", { credentials: "include" })
-      .then(r => r.json())
-      .then(d => { if (d.token) setToken(d.token); })
-      .catch(() => {});
-  }, []);
+  const generateToken = async () => {
+    setGeneratingToken(true);
+    setLimitReached(false);
+    try {
+      const res = await fetch("/api/cli/token", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Sync setup" }),
+      });
+      const data = await res.json();
+      // The token cap is reachable here but this card has no revoke UI, so send
+      // the user to Settings instead of surfacing a raw error they can't act on.
+      if (res.status === 409) {
+        setLimitReached(true);
+        return;
+      }
+      if (!res.ok) throw new Error(data.error || "Failed to generate CLI token");
+      setToken(data.token);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to generate CLI token");
+    } finally {
+      setGeneratingToken(false);
+    }
+  };
 
-  const connectCmd = token ? `praxl connect --token ${token}` : "praxl connect";
+  const connectCmd = token ? `praxl connect --token ${token}` : "praxl connect --token <YOUR_TOKEN>";
 
   const steps = [
     { cmd: "npm install -g praxl-app", desc: "Install the Praxl CLI globally (one time)." },
@@ -593,6 +614,24 @@ function CliSetupCard() {
         <p className="text-sm text-muted-foreground">
           Use the Praxl CLI to keep local skill folders in sync. Works with Claude Code, Cursor, Codex, and more.
         </p>
+        {!token && (
+          <Button variant="outline" size="sm" onClick={generateToken} disabled={generatingToken}>
+            {generatingToken ? <Loader2 className="size-3.5 animate-spin" /> : <Terminal className="size-3.5" />}
+            Generate connection token
+          </Button>
+        )}
+        {limitReached && (
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            You&apos;ve reached the maximum number of CLI tokens.{" "}
+            <Link href="/settings" className="underline underline-offset-2">Revoke an unused one in Settings</Link>{" "}
+            then try again.
+          </p>
+        )}
+        {token && (
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            This token is shown once. Copy the connect command before leaving this page.
+          </p>
+        )}
         <div className="space-y-2">
           {steps.map((step, i) => (
             <div key={i} className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
@@ -850,6 +889,7 @@ function SkillDistribution() {
 
   // GitHub column state
   const [ghSlugs, setGhSlugs] = useState<string[]>([]);
+  const [ghSlugsSource, setGhSlugsSource] = useState<string | null>(null);
   const [ghRemoteSlugs, setGhRemoteSlugs] = useState<string[]>([]);
   const [ghConnected, setGhConnected] = useState(false);
   const ghRepo = trpc.settings.get.useQuery("github_repo");
@@ -870,15 +910,18 @@ function SkillDistribution() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (ghAssignments.data) {
-      try {
-        setGhSlugs(JSON.parse(ghAssignments.data));
-      } catch {
-        setGhSlugs([]);
-      }
+  // Seed the editable local selection from the saved assignment whenever the
+  // server value changes. Done during render (tracking the last-seeded source)
+  // instead of in an effect, which trips react-hooks/set-state-in-effect and
+  // adds an extra render pass.
+  if (ghAssignments.data && ghAssignments.data !== ghSlugsSource) {
+    setGhSlugsSource(ghAssignments.data);
+    try {
+      setGhSlugs(JSON.parse(ghAssignments.data));
+    } catch {
+      setGhSlugs([]);
     }
-  }, [ghAssignments.data]);
+  }
 
   function toggleGithub(slug: string, currentlyAssigned: boolean) {
     const newSlugs = currentlyAssigned
