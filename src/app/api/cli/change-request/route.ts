@@ -4,7 +4,7 @@ import { skillChangeRequests, skills } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { securityScan } from "@/lib/security-scan";
 import { rateLimiter } from "@/lib/rate-limit";
-import { authenticateCliRequest, CLI_TOKEN_HEADER } from "@/lib/cli-auth";
+import { authenticateCliRequest, authenticateCliOrSession } from "@/lib/cli-auth";
 
 // CLI submits a change request when local file differs from deployed version
 export async function POST(request: NextRequest) {
@@ -84,21 +84,14 @@ export async function POST(request: NextRequest) {
 
 // GET: Count pending change requests
 export async function GET(request: NextRequest) {
-  const hasCliToken = Boolean(request.headers.get(CLI_TOKEN_HEADER));
-  let userId: string | null = null;
-  if (hasCliToken) {
-    const auth = await authenticateCliRequest(request);
-    if (!auth.ok) return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
-    userId = auth.userId;
-  } else {
-    try {
-      const { getSession } = await import("@/lib/auth");
-      const session = await getSession();
-      userId = session?.userId ?? null;
-    } catch (e) { console.error("[change-request] auth", e); }
+  // Accepts either a CLI token (daemon) or a browser session (web app).
+  const auth = await authenticateCliOrSession(request);
+  if (!auth.ok) {
+    // A bad CLI token is a hard error; an absent session just means "no pending".
+    if (auth.source === "cli") return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
+    return NextResponse.json({ count: 0 });
   }
-
-  if (!userId) return NextResponse.json({ count: 0 });
+  const userId = auth.userId;
 
   const pending = await db.query.skillChangeRequests.findMany({
     where: and(

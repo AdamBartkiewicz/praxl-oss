@@ -3,7 +3,7 @@ import { z } from "zod";
 import { desc, eq, and, isNull, or, gt } from "drizzle-orm";
 import { getSession } from "@/lib/auth";
 import { db } from "@/db";
-import { cliTokens } from "@/db/schema";
+import { cliTokens, users } from "@/db/schema";
 import { DEFAULT_CLI_SCOPES, generateCliToken } from "@/lib/cli-auth";
 
 const createTokenSchema = z.object({
@@ -57,18 +57,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const activeTokens = await db.query.cliTokens.findMany({
-    where: and(
-      eq(cliTokens.userId, session.userId),
-      isNull(cliTokens.revokedAt),
-      or(isNull(cliTokens.expiresAt), gt(cliTokens.expiresAt, new Date())),
-    ),
-    columns: { id: true },
-  });
-  if (activeTokens.length >= MAX_ACTIVE_TOKENS) {
-    return NextResponse.json({ error: "Revoke an existing CLI token before creating another" }, { status: 409 });
-  }
-
+  // Validate input before opening a transaction so we never hold a lock across it.
   const parsed = createTokenSchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid token settings" }, { status: 400 });
@@ -83,21 +72,44 @@ export async function POST(request: NextRequest) {
   }
 
   const generated = generateCliToken();
-  const [created] = await db.insert(cliTokens).values({
-    userId: session.userId,
-    name: parsed.data.name,
-    tokenHash: generated.tokenHash,
-    tokenPrefix: generated.tokenPrefix,
-    scopes: [...DEFAULT_CLI_SCOPES],
-    expiresAt,
-  }).returning({
-    id: cliTokens.id,
-    name: cliTokens.name,
-    tokenPrefix: cliTokens.tokenPrefix,
-    scopes: cliTokens.scopes,
-    createdAt: cliTokens.createdAt,
-    expiresAt: cliTokens.expiresAt,
+
+  // Enforce the active-token cap under a per-user lock: locking the owner's users
+  // row serializes concurrent token creation, so two requests can't both read
+  // count == MAX - 1 and each insert (which would overshoot MAX_ACTIVE_TOKENS).
+  const created = await db.transaction(async (tx) => {
+    await tx.select({ id: users.id }).from(users).where(eq(users.id, session.userId)).for("update");
+
+    const active = await tx.query.cliTokens.findMany({
+      where: and(
+        eq(cliTokens.userId, session.userId),
+        isNull(cliTokens.revokedAt),
+        or(isNull(cliTokens.expiresAt), gt(cliTokens.expiresAt, new Date())),
+      ),
+      columns: { id: true },
+    });
+    if (active.length >= MAX_ACTIVE_TOKENS) return null;
+
+    const [row] = await tx.insert(cliTokens).values({
+      userId: session.userId,
+      name: parsed.data.name,
+      tokenHash: generated.tokenHash,
+      tokenPrefix: generated.tokenPrefix,
+      scopes: [...DEFAULT_CLI_SCOPES],
+      expiresAt,
+    }).returning({
+      id: cliTokens.id,
+      name: cliTokens.name,
+      tokenPrefix: cliTokens.tokenPrefix,
+      scopes: cliTokens.scopes,
+      createdAt: cliTokens.createdAt,
+      expiresAt: cliTokens.expiresAt,
+    });
+    return row;
   });
+
+  if (!created) {
+    return NextResponse.json({ error: "Revoke an existing CLI token before creating another" }, { status: 409 });
+  }
 
   return NextResponse.json({ token: generated.token, metadata: created }, { status: 201 });
 }
@@ -119,9 +131,16 @@ export async function DELETE(request: NextRequest) {
     .where(and(eq(cliTokens.id, parsed.data.id), eq(cliTokens.userId, session.userId), isNull(cliTokens.revokedAt)))
     .returning({ id: cliTokens.id });
 
-  if (!revoked) {
-    return NextResponse.json({ error: "Token not found" }, { status: 404 });
-  }
+  if (revoked) return NextResponse.json({ revoked: true });
 
-  return NextResponse.json({ revoked: true });
+  // Nothing was updated: the token is either already revoked or not this user's.
+  // Revoking is idempotent, so a second revoke of the same token still succeeds —
+  // only a genuinely missing/foreign token is a 404.
+  const existing = await db.query.cliTokens.findFirst({
+    where: and(eq(cliTokens.id, parsed.data.id), eq(cliTokens.userId, session.userId)),
+    columns: { id: true },
+  });
+  if (existing) return NextResponse.json({ revoked: true });
+
+  return NextResponse.json({ error: "Token not found" }, { status: 404 });
 }

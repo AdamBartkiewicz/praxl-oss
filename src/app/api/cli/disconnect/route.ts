@@ -1,27 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
 import { db } from "@/db";
 import { appSettings } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import { authenticateCliRequest, CLI_TOKEN_HEADER } from "@/lib/cli-auth";
+import { authenticateCliOrSession } from "@/lib/cli-auth";
 
 export async function POST(request: NextRequest) {
-  // Support both web (session) and CLI (token header)
-  let userId: string | null = null;
-
-  const calledFromCli = Boolean(request.headers.get(CLI_TOKEN_HEADER));
-  if (calledFromCli) {
-    const auth = await authenticateCliRequest(request);
-    if (!auth.ok) return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
-    userId = auth.userId;
+  // Support both web (session) and CLI (token header).
+  const auth = await authenticateCliOrSession(request);
+  if (!auth.ok) {
+    const error = auth.source === "cli" ? "Invalid or expired token" : "Not authenticated";
+    return NextResponse.json({ error }, { status: 401 });
   }
-
-  if (!calledFromCli) {
-    const session = await getSession();
-    userId = session?.userId ?? null;
-  }
-
-  if (!userId) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  const userId = auth.userId;
+  const calledFromCli = auth.source === "cli";
 
   try {
     // Clear heartbeat = CLI appears offline immediately

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { appSettings } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
-import { authenticateCliRequest, CLI_TOKEN_HEADER } from "@/lib/cli-auth";
+import { authenticateCliRequest, authenticateCliOrSession } from "@/lib/cli-auth";
 
 // Version requirements - update these when shipping breaking changes
 const CLI_MIN_VERSION = "1.0.0";       // Below this: hard block, must update
@@ -59,22 +59,14 @@ export async function POST(request: NextRequest) {
 
 // Web app checks if CLI is online
 export async function GET(request: NextRequest) {
-  // Also support cookie-based auth for web app
-  const hasCliToken = Boolean(request.headers.get(CLI_TOKEN_HEADER));
-  let userId: string | null = null;
-  if (hasCliToken) {
-    const auth = await authenticateCliRequest(request);
-    if (!auth.ok) return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
-    userId = auth.userId;
-  } else {
-    try {
-      const { getSession } = await import("@/lib/auth");
-      const session = await getSession();
-      userId = session?.userId ?? null;
-    } catch (e) { console.error("[cli-heartbeat] auth", e); }
+  // Accepts either a CLI token (daemon) or a browser session (web app).
+  const auth = await authenticateCliOrSession(request);
+  if (!auth.ok) {
+    // A bad CLI token is a hard error; an absent session just means "not online".
+    if (auth.source === "cli") return NextResponse.json({ error: "Invalid or expired token" }, { status: 401 });
+    return NextResponse.json({ online: false });
   }
-
-  if (!userId) return NextResponse.json({ online: false });
+  const userId = auth.userId;
 
   const heartbeat = await db.query.appSettings.findFirst({
     where: and(eq(appSettings.key, "cli_heartbeat"), eq(appSettings.userId, userId)),

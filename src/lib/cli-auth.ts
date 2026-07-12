@@ -144,3 +144,32 @@ export async function authenticateCliRequest(
 
   return { ok: false, reason: "invalid" };
 }
+
+// Resolve the acting user for endpoints that accept EITHER a CLI token or a
+// browser session (heartbeat GET, change-request GET, disconnect POST). Presence
+// of the token header selects token auth; otherwise the cookie session is used.
+// `source` lets callers both pick the right failure response (a bad CLI token is
+// a hard 401, while an absent session is often a benign default) and branch on
+// how the request arrived. getSession is imported lazily so this module stays
+// free of next/headers — importing it from a tsx script or test must not fail.
+export type CliOrSessionAuth =
+  | { ok: true; userId: string; source: "cli" | "session" }
+  | { ok: false; source: "cli" | "session" };
+
+export async function authenticateCliOrSession(request: Request): Promise<CliOrSessionAuth> {
+  if (request.headers.get(CLI_TOKEN_HEADER)) {
+    const auth = await authenticateCliRequest(request);
+    return auth.ok
+      ? { ok: true, userId: auth.userId, source: "cli" }
+      : { ok: false, source: "cli" };
+  }
+
+  try {
+    const { getSession } = await import("@/lib/auth");
+    const session = await getSession();
+    if (session) return { ok: true, userId: session.userId, source: "session" };
+  } catch (e) {
+    console.error("[cli-auth] session resolution failed", e);
+  }
+  return { ok: false, source: "session" };
+}
